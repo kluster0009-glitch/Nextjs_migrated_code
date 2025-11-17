@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { Camera, User, Home, Edit2, Settings  } from 'lucide-react';
+import { Camera, User, Home, Edit2, Settings as SettingsIcon } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,7 +49,7 @@ const Settings = () => {
       if (error) {
         if (process.env.NODE_ENV === 'development') console.error('Error loading profile:', error);
         toast.error('Failed to load profile');
-        return;
+
       }
 
         if (data) {
@@ -120,7 +120,7 @@ const Settings = () => {
       if (error) {
         if (process.env.NODE_ENV === 'development') console.error('Error updating profile:', error);
         toast.error('Failed to save profile');
-        return;
+
       }
 
       toast.success('Profile updated successfully!');
@@ -175,7 +175,7 @@ const Settings = () => {
     <div className="min-h-screen immersive-bg">
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <div className="mb-8 flex items-center justify-between">
-          
+          <div>
             <h1 className="text-4xl font-bold bg-gradient-to-r from-neon-purple to-neon-cyan bg-clip-text text-transparent mb-2">
               Settings
             </h1>
@@ -238,15 +238,15 @@ const Settings = () => {
 
             {/* Account Info */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-muted/30 rounded-lg">
-              
+              <div>
                 <Label className="text-xs text-muted-foreground">Account Created</Label>
                 <p className="text-sm font-medium text-foreground">{accountCreated}</p>
               </div>
-              
+              <div>
                 <Label className="text-xs text-muted-foreground">Login Type</Label>
                 <p className="text-sm font-medium text-foreground">{loginType}</p>
               </div>
-              
+              <div>
                 <Label className="text-xs text-muted-foreground">Role</Label>
                 <p className="text-sm font-medium text-foreground capitalize">{role}</p>
               </div>

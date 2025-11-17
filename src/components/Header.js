@@ -31,7 +31,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import logo from '@/assets/logo.svg'
 
 const Header = () => {
   const pathname = usePathname()
@@ -90,7 +89,7 @@ const Header = () => {
           {/* Logo */}
           <Link href="/" className="flex items-center gap-0.5">
             <img 
-              src={logo} 
+              src="/logo.svg" 
               alt="Kluster" 
               className={`h-12 w-auto -mr-1 transition-transform duration-600 ${isLogoFlipping ? 'animate-flip' : ''}`}
             />

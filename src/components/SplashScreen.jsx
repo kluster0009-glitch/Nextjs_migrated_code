@@ -1,5 +1,4 @@
 import React from 'react';
-import logo from '@/assets/logo.svg';
 
 const SplashScreen = ({ onComplete }) => {
   React.useEffect(() => {
@@ -14,7 +13,7 @@ const SplashScreen = ({ onComplete }) => {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 dark:from-cyber-dark dark:to-cyber-dark/90 animate-fade-in">
       <div className="text-center space-y-4 animate-scale-in">
         <div className="flex justify-center mb-6">
-          <img src={logo} alt="Kluster" className="h-32 w-auto animate-pulse" />
+          <img src="/logo.svg" alt="Kluster" className="h-32 w-auto animate-pulse" />
         </div>
         <h1 className="text-7xl md:text-9xl font-bold text-blue-500 dark:text-neon-cyan">
           KLUSTER

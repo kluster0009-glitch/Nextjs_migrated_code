@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react';
-import { Settings, Grid, Bookmark, UserSquare2, Link  } from 'lucide-react';
+import { Settings, Grid, Bookmark, UserSquare2, Link as LinkIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -10,8 +10,6 @@ import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
-
-
 
 const Profile = () => {
   const { user } = useAuth();
@@ -24,7 +22,7 @@ const Profile = () => {
   const [postsCount, setPostsCount] = useState(0);
   const [followersCount] = useState(11);
   const [followingCount] = useState(9);
-  const [userPosts, setUserPosts] = useState<Post[]>([]);
+  const [userPosts, setUserPosts] = useState([]);
   const [activeTab, setActiveTab] = useState('posts');
 
   useEffect(() => {
@@ -41,7 +39,7 @@ const Profile = () => {
         if (error) {
           if (process.env.NODE_ENV === 'development') console.error('Error loading profile:', error);
           toast.error('Failed to load profile');
-          return;
+
         }
 
         if (data) {

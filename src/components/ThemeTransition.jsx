@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 export const ThemeTransition = () => {
   const { theme } = useTheme();
   const [isAnimating, setIsAnimating] = useState(false);
-  const [previousTheme, setPreviousTheme] = useState<string | undefined>(undefined);
+  const [previousTheme, setPreviousTheme] = useState(undefined);
 
   useEffect(() => {
     // Only animate if we have a previous theme and it's different from current

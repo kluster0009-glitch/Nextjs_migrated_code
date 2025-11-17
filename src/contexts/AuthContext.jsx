@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
     if (!AUTH_ENABLED) {
       setUser({ id: 'dev-user', email: 'dev@example.com' });
       setLoading(false);
-      return;
+
     }
 
     // Set up auth state listener

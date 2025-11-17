@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import *  from 'zod';
+import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -16,7 +16,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 import { BACKEND_URL } from '@/lib/config';
 import AddOrganizationModal from './AddOrganizationModal';
-import logo from '@/assets/logo.svg';
+
 // Schema for when isSignUp is FALSE
 export const signInSchema = z.object({
   email: z.string().email('Invalid email address'),
@@ -78,7 +78,7 @@ const Auth = () => {
                 title: "Access denied",
                 description: "Could not verify your email domain. Please try again.",
               });
-              return;
+
             }
 
             if (!result.isValid) {
@@ -116,7 +116,7 @@ const Auth = () => {
               title: "Access denied",
               description: "Could not verify your email domain. Please try again.",
             });
-            return;
+
           }
 
           if (!result.isValid) {
@@ -126,7 +126,7 @@ const Auth = () => {
               title: "Access denied",
               description: result.message || "Please use your institutional email address.",
             });
-            return;
+
           }
 
           router.push('/');
@@ -136,7 +136,6 @@ const Auth = () => {
 
     return () => subscription.unsubscribe();
   }, [navigate]);
-
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -153,7 +152,7 @@ const Auth = () => {
             description: verificationResult.message || "This email domain is not permitted.",
           });
           setIsLoading(false); // Stop loading and end the function
-          return;
+
         }
         // --- END NEW SECTION ---
         const redirectUrl = `${window.location.origin}/`;
@@ -300,7 +299,7 @@ const Auth = () => {
           <CardHeader className="space-y-1 text-center">
             <div className="flex flex-col items-center justify-center mb-4">
               <div className="flex items-center gap-0">
-                <img src={logo} alt="Kluster Logo" className="w-12 h-12" />
+                <img src="/logo.svg" alt="Kluster Logo" className="w-12 h-12" />
                 <h1 className="text-2xl font-semibold font-space bg-gradient-to-r from-soft-cyan to-soft-violet bg-clip-text text-transparent">
                   KLUSTER
                 </h1>

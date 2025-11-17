@@ -25,7 +25,7 @@ const Index = () => {
       return;
     }
 
-    // Check if user h seen the splash screen in this session
+    // Check if user has seen the splash screen in this session
     const visited = sessionStorage.getItem('hasVisitedKluster');
     if (visited) {
       setShowSplash(false);
@@ -45,7 +45,7 @@ const Index = () => {
   return (
     <div className="min-h-screen immersive-bg">
       <Header />
-      
+      <main>
         <LandingHero />
         <ConnectionsSection />
         <IntelligenceSection />

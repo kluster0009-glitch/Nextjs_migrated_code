@@ -9,7 +9,7 @@ import {
   DialogOverlay,
   DialogPortal,
 } from '@/components/ui/dialog';
-import *  from "@radix-ui/react-dialog";
+import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -21,13 +21,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/auth-context';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Image , X } from 'lucide-react';
+import { Loader2, Image as ImageIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
-
-
 
 const categories = [
   'General',
@@ -58,7 +56,7 @@ export function CreatePostModal({ open, onOpenChange, onPostCreated }) {
         description: 'You must be logged in to create a post',
         variant: 'destructive',
       });
-      return;
+
     }
 
     if (!title.trim() || !content.trim()) {
@@ -67,7 +65,7 @@ export function CreatePostModal({ open, onOpenChange, onPostCreated }) {
         description: 'Please fill in all required fields',
         variant: 'destructive',
       });
-      return;
+
     }
 
     setLoading(true);
@@ -127,7 +125,7 @@ export function CreatePostModal({ open, onOpenChange, onPostCreated }) {
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      
+      <DialogPortal>
         {/* Custom Overlay with darker background */}
         <DialogPrimitive.Overlay 
           className="fixed inset-0 z-50 bg-black/90 backdrop-blur-sm data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
@@ -144,7 +142,7 @@ export function CreatePostModal({ open, onOpenChange, onPostCreated }) {
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
           
-          
+          <DialogHeader>
             <DialogTitle className="text-2xl font-bold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
               Create New Post
             </DialogTitle>

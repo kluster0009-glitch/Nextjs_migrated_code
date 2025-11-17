@@ -25,63 +25,33 @@ import { useAuth } from '@/lib/auth-context';
 import { ChatMessage } from '@/components/ChatMessage';
 import { UserProfileModal } from '@/components/UserProfileModal';
 
-
-
-
-  name;
-  description | null;
-  type: ChannelType;
-  scope: ChannelScope;
-  subject_name | null;
-  organization_id | null;
-};
-
-
-  channel_id;
-  sender_id;
-  content;
-  created_at;
-  deleted | null;
-};
-
-
-};
-
-
-
 const Chat = () => {
   const { user, session } = useAuth(); // ✅ use auth context
 
-  const [selectedChannelId, setSelectedChannelId] = useState<number | null>(
+  const [selectedChannelId, setSelectedChannelId] = useState(
     null
   );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const [expandedSections, setExpandedSections] = useState<
-    Record<SectionKey, boolean>
-  >({
+  const [expandedSections, setExpandedSections] = useState({
     myCollege: true,
     subjects: true,
     global: true,
   });
 
-  const [channelsState, setChannelsState] = useState<{
-    myCollege;
-    subjects;
-    global;
-  }>({
+  const [channelsState, setChannelsState] = useState({
     myCollege: [],
     subjects: [],
     global: [],
   });
 
-  const [messages, setMessages] = useState<MessageWithSender[]>([]);
+  const [messages, setMessages] = useState([]);
   const [loadingChannels, setLoadingChannels] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [newMessage, setNewMessage] = useState('');
-  const [organizationName, setOrganizationName] = useState<string | null>(null);
-  const [memberCount, setMemberCount] = useState<number | null>(null);
+  const [organizationName, setOrganizationName] = useState(null);
+  const [memberCount, setMemberCount] = useState(null);
   const [joinedChannelIds, setJoinedChannelIds] = useState([]);
   const [profileModalUserId, setProfileModalUserId] = useState(null);
   const [profileModalOpen, setProfileModalOpen] = useState(false);
@@ -107,7 +77,7 @@ const Chat = () => {
     [allChannels, selectedChannelId]
   );
 
-  const getChannelIcon = (channel: Channel | null) => {
+  const getChannelIcon = (channel) => {
     if (!channel) return MessageCircle;
     if (channel.type === 'subject') {
       if (channel.subject_name?.toLowerCase().includes('computer')) return Code;
@@ -120,7 +90,7 @@ const Chat = () => {
     return MessageCircle;
   };
 
-  const getChannelSubtitle = (channel: Channel | null) => {
+  const getChannelSubtitle = (channel) => {
     if (!channel) return '';
     if (channel.type === 'subject') return 'Subject channel';
     if (channel.type === 'study_group') return 'Study group';
@@ -129,7 +99,7 @@ const Chat = () => {
     return '';
   };
 
-  const getInitials = (name? | null) => {
+  const getInitials = (name) => {
     if (!name) return '?';
     const parts = name.trim().split(' ');
     if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
@@ -176,7 +146,7 @@ const Chat = () => {
         return;
       }
 
-      const ids = (data || []).map((row) => row.channel_id );
+      const ids = (data || []).map((row) => row.channel_id);
       setJoinedChannelIds(ids);
     };
 
@@ -188,7 +158,7 @@ const Chat = () => {
     const fetchChannels = async () => {
       setLoadingChannels(true);
       try {
-        let organizationId | null = null;
+        let organizationId = null;
 
         if (user?.id) {
           // 1) Get current user's organization_id from profiles
@@ -227,7 +197,7 @@ const Chat = () => {
           return;
         }
 
-        const all = (data || []) [];
+        const all = (data || []);
 
         // 4) Only my college's channels (scope=college AND org_id matches)
         const myCollege = all.filter((c) => {
@@ -285,14 +255,14 @@ const Chat = () => {
         return;
       }
 
-      const rows = (data || []) [];
+      const rows = (data || []);
 
       // Collect unique sender IDs for profiles lookup
       const senderIds = Array.from(
         new Set(rows.map((m) => m.sender_id).filter(Boolean))
       );
 
-      let profilesMap: Record<string, string> = {};
+      let profilesMap = {};
       if (senderIds.length > 0) {
         const { data: profiles, error: profilesError } = await supabase
           .from('profiles')
@@ -300,7 +270,7 @@ const Chat = () => {
           .in('id', senderIds);
 
         if (!profilesError && profiles) {
-          profilesMap = (profiles []).reduce(
+          profilesMap = (profiles || []).reduce(
             (acc, p) => ({
               ...acc,
               [p.id]: p.full_name,
@@ -377,7 +347,7 @@ const Chat = () => {
     [session?.access_token]
   );
 
-  const handleChannelSelect = async (channel: Channel) => {
+  const handleChannelSelect = async (channel) => {
     setSelectedChannelId(channel.id);
     setSidebarOpen(false);
 
@@ -417,9 +387,7 @@ const Chat = () => {
     }
   };
 
-  const handleInputKeyDown = (
-    e
-  ) => {
+  const handleInputKeyDown = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       if (!sending) handleSendMessage();
@@ -493,7 +461,7 @@ const Chat = () => {
           <ScrollArea className="flex-1 px-3">
             <div className="py-4 space-y-6">
               {/* My College */}
-              
+              <div>
                 <button
                   onClick={() => toggleSection('myCollege')}
                   className="w-full flex items-center justify-between mb-3 px-2 hover:bg-muted/40 rounded-lg transition-colors group"
@@ -528,7 +496,7 @@ const Chat = () => {
               </div>
 
               {/* Subjects */}
-              
+              <div>
                 <button
                   onClick={() => toggleSection('subjects')}
                   className="w-full flex items-center justify-between mb-3 px-2 hover:bg-muted/40 rounded-lg transition-colors group"
@@ -563,7 +531,7 @@ const Chat = () => {
               </div>
 
               {/* Global */}
-              
+              <div>
                 <button
                   onClick={() => toggleSection('global')}
                   className="w-full flex items-center justify-between mb-3 px-2 hover:bg-muted/40 rounded-lg transition-colors group"
@@ -621,7 +589,7 @@ const Chat = () => {
                   })()}
               </div>
 
-              
+              <div>
                 <h2 className="font-semibold text-foreground text-base">
                   {currentChannel
                     ? currentChannel.name ||

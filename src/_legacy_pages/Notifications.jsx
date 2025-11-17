@@ -12,9 +12,9 @@ import { BACKEND_URL } from '@/lib/config';
 
 const Notifications = () => {
   const { session, user } = useAuth();
-  const [requests, setRequests] = useState<FriendRequest[]>([]);
+  const [requests, setRequests] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [respondingTo, setRespondingTo] = useState<string | null>(null);
+  const [respondingTo, setRespondingTo] = useState(null);
 
   useEffect(() => {
     fetchFriendRequests();
@@ -55,10 +55,10 @@ const Notifications = () => {
   };
 
   const handleRespond = async (
-  requestId,
-  action: 'accept' | 'reject'
-) => {
-  if (!session?.access_token) return;
+    requestId,
+    action
+  ) => {
+    if (!session?.access_token) return;
 
   setRespondingTo(requestId);
 
@@ -99,8 +99,7 @@ const Notifications = () => {
   }
 };
 
-
-  const getInitials = (name | null, username | null) => {
+  const getInitials = (name, username) => {
     if (name) {
       return name
         .split(' ')
@@ -115,7 +114,7 @@ const Notifications = () => {
     return 'U';
   };
 
-  const getDisplayName = (name | null, username | null) => {
+  const getDisplayName = (name, username) => {
     return name || username || 'Unknown User';
   };
 

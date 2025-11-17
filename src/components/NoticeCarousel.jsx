@@ -24,8 +24,8 @@ const loadGoogleFont = (fontFamily) => {
 };
 
 const NoticeCarousel = () => {
-  const [api, setApi] = useState<CarouselApi>();
-  const [notices, setNotices] = useState<Notice[]>([]);
+  const [api, setApi] = useState();
+  const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Fetch notices from database
@@ -42,7 +42,7 @@ const NoticeCarousel = () => {
         if (error) throw error;
         
         if (data && data.length > 0) {
-          const typedNotices = data as Notice[];
+          const typedNotices = data;
           setNotices(typedNotices);
           
           // Load Google Fonts for all notices

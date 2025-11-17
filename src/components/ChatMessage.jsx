@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserPlus, MessageSquare, Ban, Flag } from 'lucide-react';
 import { BACKEND_URL } from '@/config';
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from '@/lib/auth-context';
 
 export const ChatMessage = ({
   message,
@@ -34,7 +34,7 @@ export const ChatMessage = ({
     if (user && user.id === userId) {
       console.warn('Cannot send a friend request to yourself');
       setDropdownOpen(false);
-      return;
+
     }
 
     if (sendingFriendRequest) return;
@@ -43,7 +43,7 @@ export const ChatMessage = ({
     try {
       if (!session?.access_token) {
         console.warn('No session/token, cannot send friend request');
-        return;
+
       }
 
       const res = await fetch(`${BACKEND_URL}/friends/requests`, {
@@ -58,7 +58,7 @@ export const ChatMessage = ({
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
         console.error('Failed to send friend request', res.status, errorData);
-        return;
+
       }
 
       const data = await res.json();

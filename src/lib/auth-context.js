@@ -23,18 +23,11 @@ export const AuthProvider = ({ children }) => {
   const pathname = usePathname()
   const supabase = createClient()
 
-  const AUTH_ENABLED = process.env.NEXT_PUBLIC_AUTH_ENABLED === 'true'
-
   useEffect(() => {
-    if (!AUTH_ENABLED) {
-      setUser({ id: 'dev-user', email: 'dev@example.com' })
-      setLoading(false)
-      return
-    }
-
     // Set up auth state listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
+        console.log('Auth state changed:', event, session?.user?.email)
         setSession(session)
         setUser(session?.user ?? null)
         setLoading(false)
@@ -50,6 +43,7 @@ export const AuthProvider = ({ children }) => {
 
     // Check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log('Initial session check:', session?.user?.email)
       setSession(session)
       setUser(session?.user ?? null)
       setLoading(false)
@@ -82,13 +76,15 @@ export const AuthProvider = ({ children }) => {
   }
 
   const signOut = async () => {
-    if (AUTH_ENABLED) {
+    try {
       await supabase.auth.signOut()
-    } else {
       setUser(null)
+      setSession(null)
+      router.push('/')
+      router.refresh()
+    } catch (error) {
+      console.error('Error signing out:', error)
     }
-    router.push('/')
-    router.refresh()
   }
 
   const value = {

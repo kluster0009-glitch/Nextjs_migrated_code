@@ -18,18 +18,12 @@ import {
 } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
-// 1. Update the UserProfile interface
-const UserProfileModal = ({ userId, isOpen, onClose }) => {
-        organization_name | null;
-    } | null; // It can be an object or null
-}
-
 export const UserProfileModal = ({
     userId,
     open,
     onOpenChange,
 }) => {
-    const [profile, setProfile] = useState<UserProfile | null>(null);
+    const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -61,7 +55,7 @@ export const UserProfileModal = ({
                     console.error('Error fetching profile:', error);
                     setProfile(null);
                 } else if (data) {
-                    setProfile(data Profile); // Cast data to our new interface
+                    setProfile(data); // Cast data to our new interface
                 } else {
                     setProfile(null);
                 }
@@ -76,7 +70,7 @@ export const UserProfileModal = ({
         fetchProfile();
     }, [userId, open]);
 
-    const getInitials = (name | null) => {
+    const getInitials = (name) => {
         if (!name) return '?';
         return name
             .split(' ')
@@ -95,7 +89,7 @@ export const UserProfileModal = ({
         });
     };
 
-    const capitalize = (s | null) => {
+    const capitalize = (s) => {
         if (!s) return '';
         return s.charAt(0).toUpperCase() + s.slice(1);
     };
@@ -231,7 +225,6 @@ export const UserProfileModal = ({
                                 <span>Joined {formatDate(profile.created_at)}</span>
                             </div>
                         </div>
-
 
                     </>
                 ) : (

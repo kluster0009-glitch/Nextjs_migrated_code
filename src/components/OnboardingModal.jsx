@@ -23,12 +23,12 @@ export const OnboardingModal = ({ open, userId, userEmail }) => {
     
     if (!username || !fullName || !department || !rollNumber || !whereHeard) {
       toast.error('Please fill in all required fields');
-      return;
+
     }
 
     if (whereHeard === 'other' && !otherSource) {
       toast.error('Please specify where you heard about us');
-      return;
+
     }
 
     setSaving(true);

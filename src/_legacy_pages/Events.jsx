@@ -118,12 +118,10 @@ const Events = () => {
                     <div className="flex-1 space-y-4">
                       {/* Header */}
                       <div className="flex items-start justify-between">
-                        
-                          <h3 className="text-xl font-semibold text-foreground mb-2">{event.title}</h3>
-                          <Badge className="bg-neon-green/20 text-neon-green border-neon-green/30">
-                            {event.status}
-                          </Badge>
-                        </div>
+                        <h3 className="text-xl font-semibold text-foreground mb-2">{event.title}</h3>
+                        <Badge className="bg-neon-green/20 text-neon-green border-neon-green/30">
+                          {event.status}
+                        </Badge>
                       </div>
 
                       {/* Description */}
@@ -135,15 +133,15 @@ const Events = () => {
                       <div className="flex items-center space-x-6 text-sm">
                         <div className="flex items-center space-x-2 text-muted-foreground">
                           <Calendar className="w-4 h-4" />
-                          {event.date}</span>
+                          <span>{event.date}</span>
                         </div>
                         <div className="flex items-center space-x-2 text-muted-foreground">
                           <Clock className="w-4 h-4" />
-                          {event.time}</span>
+                          <span>{event.time}</span>
                         </div>
                         <div className="flex items-center space-x-2 text-muted-foreground">
                           <MapPin className="w-4 h-4" />
-                          {event.location}</span>
+                          <span>{event.location}</span>
                         </div>
                       </div>
 
@@ -151,7 +149,7 @@ const Events = () => {
                       <div className="flex items-center justify-between pt-2">
                         <div className="flex items-center space-x-2 text-sm text-muted-foreground">
                           <Users className="w-4 h-4" />
-                          {event.interested} interested</span>
+                          <span>{event.interested} interested</span>
                         </div>
                         <div className="flex space-x-2">
                           <Button variant="outline" size="sm" className="border-neon-cyan/30 text-neon-cyan hover:bg-neon-cyan/20">
