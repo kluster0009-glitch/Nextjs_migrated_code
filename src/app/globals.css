@@ -1,0 +1,194 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* CampusConnect Cyberpunk Design System */
+
+@layer base {
+  :root {
+    /* Kluster dark navy base colors */
+    --background: 220 40% 8%;
+    --foreground: 210 30% 95%;
+
+    --card: 220 35% 12%;
+    --card-foreground: 210 30% 95%;
+
+    --popover: 220 35% 12%;
+    --popover-foreground: 210 30% 95%;
+
+    /* Soft cyan primary */
+    --primary: 185 70% 55%;
+    --primary-foreground: 220 40% 8%;
+
+    /* Soft violet secondary */
+    --secondary: 260 60% 65%;
+    --secondary-foreground: 220 40% 8%;
+
+    /* Muted tones */
+    --muted: 220 30% 20%;
+    --muted-foreground: 215 20% 60%;
+
+    /* Accent */
+    --accent: 185 70% 55%;
+    --accent-foreground: 220 40% 8%;
+
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 210 30% 95%;
+
+    --border: 220 25% 18%;
+    --input: 220 30% 15%;
+    --ring: 185 70% 55%;
+
+    --radius: 0.75rem;
+
+    /* Kluster custom colors */
+    --soft-cyan: 185 70% 55%;
+    --soft-violet: 260 60% 65%;
+    --soft-blue: 210 70% 60%;
+    --ambient-glow: 185 60% 45%;
+    --dark-navy: 220 40% 8%;
+    --darker-navy: 220 45% 6%;
+    --card-bg: 220 35% 12%;
+    --border-subtle: 220 25% 18%;
+
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--soft-cyan)) 0%, hsl(var(--soft-violet)) 100%);
+    --gradient-ambient: linear-gradient(180deg, hsl(var(--darker-navy)) 0%, hsl(var(--dark-navy)) 50%, hsl(var(--card-bg)) 100%);
+    --gradient-subtle: linear-gradient(135deg, hsl(var(--card-bg)) 0%, hsl(var(--muted)) 100%);
+
+    /* Glows & Shadows */
+    --glow-cyan: 0 0 40px hsl(var(--soft-cyan) / 0.3);
+    --glow-violet: 0 0 40px hsl(var(--soft-violet) / 0.3);
+    --shadow-ambient: 0 20px 60px -15px hsl(0 0% 0% / 0.4);
+
+    /* Animations */
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-float: all 0.6s ease-in-out;
+  }
+
+  .light {
+    /* Light mode base colors */
+    --background: 210 30% 97%;
+    --foreground: 220 40% 12%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 40% 12%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 40% 12%;
+
+    /* Vibrant cyan primary */
+    --primary: 185 80% 45%;
+    --primary-foreground: 210 30% 97%;
+
+    /* Vibrant violet secondary */
+    --secondary: 260 70% 55%;
+    --secondary-foreground: 210 30% 97%;
+
+    /* Light muted tones */
+    --muted: 210 30% 92%;
+    --muted-foreground: 215 20% 40%;
+
+    /* Accent */
+    --accent: 185 80% 45%;
+    --accent-foreground: 210 30% 97%;
+
+    --destructive: 0 70% 60%;
+    --destructive-foreground: 210 30% 97%;
+
+    --border: 215 25% 85%;
+    --input: 215 25% 88%;
+    --ring: 185 80% 45%;
+
+    /* Light mode custom colors */
+    --soft-cyan: 185 80% 45%;
+    --soft-violet: 260 70% 55%;
+    --soft-blue: 210 80% 50%;
+    --ambient-glow: 185 70% 40%;
+    --dark-navy: 210 30% 97%;
+    --darker-navy: 0 0% 100%;
+    --card-bg: 0 0% 100%;
+    --border-subtle: 215 25% 85%;
+
+    /* Light mode scrollbar */
+    ::-webkit-scrollbar-track {
+      background: hsl(var(--darker-navy));
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: hsl(var(--soft-cyan) / 0.4);
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--soft-cyan) / 0.6);
+    }
+  }
+
+  /* Apply dark theme by default */
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    background: hsl(var(--dark-bg));
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+
+  /* Custom scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--darker-navy));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--soft-cyan) / 0.3);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--soft-cyan) / 0.5);
+  }
+
+  /* Ambient glow effect */
+  .ambient-glow {
+    text-shadow: 0 0 20px currentColor;
+  }
+
+  /* Subtle borders */
+  .subtle-border {
+    border: 1px solid hsl(var(--border-subtle));
+    box-shadow: 0 0 20px hsl(var(--soft-cyan) / 0.1);
+  }
+
+  /* Immersive background */
+  .immersive-bg {
+    background: radial-gradient(circle at 20% 20%, hsl(var(--soft-cyan) / 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 80% 80%, hsl(var(--soft-violet) / 0.08) 0%, transparent 40%),
+                hsl(var(--dark-navy));
+  }
+
+  /* Floating particles effect */
+  @keyframes float {
+    0%, 100% { transform: translateY(0px) translateX(0px); }
+    33% { transform: translateY(-20px) translateX(10px); }
+    66% { transform: translateY(-10px) translateX(-10px); }
+  }
+
+  .float-particle {
+    animation: float 8s ease-in-out infinite;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
