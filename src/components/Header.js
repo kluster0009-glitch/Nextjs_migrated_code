@@ -53,8 +53,8 @@ const Header = () => {
   
   const handleLogout = async () => {
     setIsLoggingOut(true)
-    setTimeout(() => {
-      signOut()
+    setTimeout(async () => {
+      await signOut()
     }, 400)
   }
   

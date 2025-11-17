@@ -60,8 +60,8 @@ export function AppSidebar() {
     setTheme(theme === 'dark' ? 'light' : 'dark')
   }
 
-  const handleLogout = () => {
-    signOut()
+  const handleLogout = async () => {
+    await signOut()
   }
 
   const isActive = (path) => pathname === path

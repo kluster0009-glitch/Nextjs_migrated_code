@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -37,6 +38,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [allowedDomains, setAllowedDomains] = useState([]);
   const router = useRouter();
   const { toast } = useToast();
 
@@ -52,30 +54,116 @@ export default function AuthPage() {
     },
   });
 
-  // Check if user is already authenticated
+  // Fetch allowed domains on component mount
   useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        router.push('/feed');
+    const fetchAllowedDomains = async () => {
+      const { data, error } = await supabase
+        .from('email_domains')
+        .select('domain, organization_name')
+        .order('organization_name');
+      
+      if (!error && data) {
+        setAllowedDomains(data);
       }
     };
     
-    checkSession();
+    fetchAllowedDomains();
+  }, []);
 
+  // Check if user is already authenticated (middleware should handle this but check anyway)
+  useEffect(() => {
+    // Check for error in URL params (from middleware)
+    const urlParams = new URLSearchParams(window.location.search)
+    const error = urlParams.get('error')
+    const domain = urlParams.get('domain')
+    
+    if (error === 'unauthorized_domain' && domain) {
+      toast({
+        variant: "destructive",
+        title: "Unauthorized Email Domain",
+        description: `Sorry, ${domain} is not an authorized domain. Please use your institutional email.`,
+        duration: 5000,
+      })
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/auth')
+    }
+    
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (session?.user) {
+        if (session?.user && event === 'SIGNED_IN') {
           router.push('/feed');
         }
       }
     );
 
     return () => subscription.unsubscribe();
-  }, [router]);
+  }, [router, toast]);
+
+  // Validate email domain using the database function
+  const validateEmailDomain = async (email) => {
+    try {
+      const domain = email.split('@')[1]?.toLowerCase();
+      
+      if (!domain) {
+        return { valid: false, message: 'Invalid email format' };
+      }
+
+      // Use the new RPC function for validation
+      const { data, error } = await supabase
+        .rpc('check_email_domain', { user_email: email });
+
+      if (error) {
+        console.error('Domain validation error:', error);
+        return { 
+          valid: false, 
+          message: 'Failed to validate email domain. Please try again.' 
+        };
+      }
+
+      if (!data || data.length === 0) {
+        return { 
+          valid: false, 
+          message: `Sorry, ${domain} is not an authorized domain. Please use your institutional email.` 
+        };
+      }
+
+      const result = data[0];
+      
+      if (!result.is_valid) {
+        return { 
+          valid: false, 
+          message: result.message || `Sorry, ${domain} is not an authorized domain.` 
+        };
+      }
+
+      return { 
+        valid: true, 
+        organizationName: result.organization_name 
+      };
+    } catch (error) {
+      console.error('Domain validation error:', error);
+      return { valid: false, message: 'Failed to validate email domain' };
+    }
+  };
 
   const onSubmit = async (data) => {
     setIsLoading(true);
+    
+    // Validate email domain FIRST (application-level check)
+    const domainCheck = await validateEmailDomain(data.email);
+    
+    if (!domainCheck.valid) {
+      toast({
+        variant: "destructive",
+        title: "Unauthorized Email Domain",
+        description: domainCheck.message,
+        duration: 6000,
+      });
+      setIsLoading(false);
+      return;
+    }
+
     try {
       if (isSignUp) {
         const redirectUrl = `${window.location.origin}/auth/callback`;
@@ -86,12 +174,21 @@ export default function AuthPage() {
             emailRedirectTo: redirectUrl,
             data: {
               full_name: data.fullName || '',
+              organization_name: domainCheck.organizationName || '',
             }
           }
         });
 
         if (error) {
-          if (error.message.includes('already registered')) {
+          // Check if error is from database trigger (unauthorized domain)
+          if (error.message?.includes('not authorized') || error.message?.includes('Email domain')) {
+            toast({
+              variant: "destructive",
+              title: "Unauthorized Email Domain",
+              description: error.message,
+              duration: 8000,
+            });
+          } else if (error.message.includes('already registered')) {
             toast({
               variant: "destructive",
               title: "Account already exists",
@@ -123,6 +220,14 @@ export default function AuthPage() {
               title: "Invalid credentials",
               description: "Please check your email and password.",
             });
+          } else if (error.message?.includes('not authorized') || error.message?.includes('Email domain')) {
+            // In case user was deleted due to unauthorized domain
+            toast({
+              variant: "destructive",
+              title: "Unauthorized Email Domain",
+              description: "Your email domain is not authorized for this platform.",
+              duration: 8000,
+            });
           } else {
             toast({
               variant: "destructive",
@@ -139,10 +244,11 @@ export default function AuthPage() {
         }
       }
     } catch (error) {
+      console.error('Auth error:', error);
       toast({
         variant: "destructive",
         title: "Something went wrong",
-        description: "Please try again later.",
+        description: error.message || "Please try again later.",
       });
     } finally {
       setIsLoading(false);
@@ -155,7 +261,11 @@ export default function AuthPage() {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
         }
       });
 
@@ -165,14 +275,45 @@ export default function AuthPage() {
           title: "Google sign in failed",
           description: error.message,
         });
+        setIsLoading(false);
       }
+      // Don't set loading to false here - redirect happens
     } catch (error) {
       toast({
         variant: "destructive",
         title: "Something went wrong",
         description: "Please try again later.",
       });
-    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleMicrosoftSignIn = async () => {
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'azure',
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+          scopes: 'email'
+        }
+      });
+
+      if (error) {
+        toast({
+          variant: "destructive",
+          title: "Microsoft sign in failed",
+          description: error.message,
+        });
+        setIsLoading(false);
+      }
+      // Don't set loading to false here - redirect happens
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Something went wrong",
+        description: "Please try again later.",
+      });
       setIsLoading(false);
     }
   };
@@ -191,12 +332,16 @@ export default function AuthPage() {
         <Card className="glow-border bg-cyber-card/50 backdrop-blur-xl">
           <CardHeader className="space-y-1 text-center">
             <div className="flex flex-col items-center justify-center mb-4">
-              <div className="flex items-center gap-0">
-                <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-neon-purple to-neon-cyan flex items-center justify-center">
-                  <span className="text-black font-bold text-xl">K</span>
-                </div>
+              <div className="flex items-center gap-2">
+                <Image 
+                  src="/logo.svg" 
+                  alt="Kluster Logo" 
+                  width={48} 
+                  height={48}
+                  className="w-12 h-12"
+                />
                 <h1 className="text-2xl font-semibold font-space bg-gradient-to-r from-soft-cyan to-soft-violet bg-clip-text text-transparent">
-                  LUSTER
+                  KLUSTER
                 </h1>
               </div>
               <p className="text-sm text-muted-foreground mt-2">Connect. Learn. Evolve.</p>
@@ -227,6 +372,21 @@ export default function AuthPage() {
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
                 </svg>
                 Continue with Google
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full border-cyber-border hover:bg-muted/50 hover:text-foreground"
+                onClick={handleMicrosoftSignIn}
+                disabled={isLoading}
+              >
+                <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
+                  <path fill="#f25022" d="M11.4 11.4H0V0h11.4v11.4z" />
+                  <path fill="#00a4ef" d="M24 11.4H12.6V0H24v11.4z" />
+                  <path fill="#7fba00" d="M11.4 24H0V12.6h11.4V24z" />
+                  <path fill="#ffb900" d="M24 24H12.6V12.6H24V24z" />
+                </svg>
+                Continue with Microsoft
               </Button>
             </div>
 
@@ -265,13 +425,18 @@ export default function AuthPage() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="Enter your email"
+                    placeholder="Enter your institutional email"
                     className="pl-10 bg-input border-cyber-border focus:border-neon-purple"
                     {...form.register('email')}
                   />
                 </div>
                 {form.formState.errors.email && (
                   <p className="text-destructive text-sm">{form.formState.errors.email.message}</p>
+                )}
+                {allowedDomains.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Only emails from authorized institutions are allowed
+                  </p>
                 )}
               </div>
 

@@ -17,8 +17,15 @@ export default function ProtectedLayout({ children }) {
     )
   }
 
+  // Middleware handles auth redirect, just show loading if no user yet
   if (!user) {
-    return null // Middleware will handle redirect
+    return (
+      <div className="min-h-screen bg-cyber-dark cyber-bg flex items-center justify-center">
+        <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-neon-purple to-neon-cyan flex items-center justify-center animate-pulse">
+          <span className="text-black font-bold text-xl">K</span>
+        </div>
+      </div>
+    )
   }
 
   return (
