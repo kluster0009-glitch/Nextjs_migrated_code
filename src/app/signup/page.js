@@ -1,8 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,6 +14,8 @@ import { Separator } from '@/components/ui/separator';
 import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 
 export default function SignupPage() {
+  const router = useRouter();
+  const { signUp, signInWithOAuth, user, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -19,6 +24,30 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
+
+  // Redirect to cluster if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/cluster')
+    }
+  }, [user, loading, router])
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-cyber-dark cyber-bg flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-purple mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render signup form if already authenticated
+  if (user) {
+    return null
+  }
 
   const validateForm = () => {
     const newErrors = {};
@@ -57,24 +86,76 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
+    setErrors({});
     
-    // Simulate loading
-    setTimeout(() => {
-      console.log('Signup attempted with:', { fullName, email, password });
+    try {
+      const { data, error } = await signUp(email, password, {
+        full_name: fullName,
+      });
+
+      if (error) {
+        toast.error(error.message || 'Failed to create account')
+        setErrors({ submit: error.message });
+        setIsLoading(false);
+        return;
+      }
+
+      // Check if email confirmation is required
+      if (data?.user?.identities?.length === 0) {
+        toast.error('An account with this email already exists.')
+        setErrors({ submit: 'An account with this email already exists.' });
+        setIsLoading(false);
+        return;
+      }
+
+      // Show success message and redirect to login
+      toast.success('Welcome aboard! 🎉 Please check your email to verify your account.')
+      router.push('/login');
+    } catch (error) {
+      toast.error('An unexpected error occurred. Please try again.')
+      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    console.log('Google sign in clicked');
-    setTimeout(() => setIsLoading(false), 1000);
+    setErrors({});
+    
+    try {
+      const { error } = await signInWithOAuth('google');
+
+      if (error) {
+        toast.error(error.message || 'Failed to sign in with Google')
+        setErrors({ submit: error.message });
+        setIsLoading(false);
+      }
+      // Success will be handled by AuthContext
+    } catch (error) {
+      toast.error('Failed to sign in with Google. Please try again.')
+      setErrors({ submit: 'Failed to sign in with Google. Please try again.' });
+      setIsLoading(false);
+    }
   };
 
   const handleMicrosoftSignIn = async () => {
     setIsLoading(true);
-    console.log('Microsoft sign in clicked');
-    setTimeout(() => setIsLoading(false), 1000);
+    setErrors({});
+    
+    try {
+      const { error } = await signInWithOAuth('azure', { scopes: 'email' });
+
+      if (error) {
+        toast.error(error.message || 'Failed to sign in with Microsoft')
+        setErrors({ submit: error.message });
+        setIsLoading(false);
+      }
+      // Success will be handled by AuthContext
+    } catch (error) {
+      toast.error('Failed to sign in with Microsoft. Please try again.')
+      setErrors({ submit: 'Failed to sign in with Microsoft. Please try again.' });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -240,6 +321,12 @@ export default function SignupPage() {
                   <p className="text-destructive text-sm">{errors.confirmPassword}</p>
                 )}
               </div>
+
+              {errors.submit && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-destructive text-sm">{errors.submit}</p>
+                </div>
+              )}
 
               <Button
                 type="submit"

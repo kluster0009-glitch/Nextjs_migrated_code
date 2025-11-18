@@ -7,7 +7,7 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from '@/components/ui/carousel';
-import { supabase } from '@/integrations/supabase/client';
+import { createClient } from '@/lib/supabase/client';
 
 // Function to load Google Fonts dynamically
 const loadGoogleFont = (fontFamily) => {
@@ -32,6 +32,7 @@ const NoticeCarousel = () => {
   useEffect(() => {
     const fetchNotices = async () => {
       try {
+        const supabase = createClient();
         const { data, error } = await supabase
           .from('carousel_slides')
           .select('*')
@@ -78,7 +79,7 @@ const NoticeCarousel = () => {
   }
 
   return (
-    <div className="w-full px-6 py-4">
+    <div className="w-full mb-6">
       <Carousel
         setApi={setApi}
         opts={{
@@ -107,48 +108,48 @@ const NoticeCarousel = () => {
             };
             
             const CardContent = (
-              <Card
-                className="relative overflow-hidden min-h-[300px] bg-gradient-to-br from-primary/10 to-primary/5 backdrop-blur-sm border border-primary/20 transition-all duration-300 hover:scale-[1.02] hover:border-primary/40 hover:shadow-lg hover:shadow-primary/20 cursor-pointer"
-              >
-                {/* Background Image with 16:9 aspect ratio */}
-                {notice.image_url && (
-                  <div 
-                    className="absolute inset-0 bg-cover bg-center"
-                    style={{ 
-                      backgroundImage: `url(${notice.image_url})`,
-                      aspectRatio: '16/9'
-                    }}
-                  >
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-                  </div>
-                )}
-                
-                {/* Content Overlay */}
-                <div className="relative z-10 p-6 flex flex-col justify-end min-h-[300px]">
-                  <div className="space-y-3">
-                    {/* Heading */}
-                    {notice.heading && (
-                      <h3 
-                        className="text-2xl md:text-3xl font-bold"
-                        style={{
-                          color: headingStyle.color,
-                          fontFamily: headingStyle.fontFamily,
-                        }}
-                      >
-                        {notice.heading}
-                      </h3>
-                    )}
-                    
-                    {/* Message */}
-                    <p 
-                      className="leading-relaxed"
-                      style={{
-                        color: messageStyle.color,
-                        fontFamily: messageStyle.fontFamily,
+              <Card className="relative overflow-hidden border-cyber-border bg-cyber-card/50 backdrop-blur-xl">
+                {/* 16:9 Aspect Ratio Container */}
+                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                  {/* Background Image */}
+                  {notice.image_url && (
+                    <div 
+                      className="absolute inset-0 bg-cover bg-center"
+                      style={{ 
+                        backgroundImage: `url(${notice.image_url})`,
                       }}
                     >
-                      {notice.message}
-                    </p>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
+                    </div>
+                  )}
+                  
+                  {/* Content Overlay */}
+                  <div className="absolute inset-0 p-6 flex flex-col justify-end">
+                    <div className="space-y-3">
+                      {/* Heading */}
+                      {notice.heading && (
+                        <h3 
+                          className="text-2xl md:text-3xl font-bold"
+                          style={{
+                            color: headingStyle.color,
+                            fontFamily: headingStyle.fontFamily,
+                          }}
+                        >
+                          {notice.heading}
+                        </h3>
+                      )}
+                      
+                      {/* Message */}
+                      <p 
+                        className="leading-relaxed"
+                        style={{
+                          color: messageStyle.color,
+                          fontFamily: messageStyle.fontFamily,
+                        }}
+                      >
+                        {notice.message}
+                      </p>
+                    </div>
                   </div>
                 </div>
               </Card>

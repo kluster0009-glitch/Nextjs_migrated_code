@@ -3,7 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
+import { useAuth } from '@/contexts/AuthContext'
 import { useState } from 'react'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Separator } from '@/components/ui/separator'
 import { 
   Home, 
   MessageSquare, 
@@ -17,7 +20,8 @@ import {
   Sun,
   Menu,
   Plus,
-  Bell
+  Bell,
+  LogOut
 } from 'lucide-react'
 import {
   Sidebar,
@@ -35,7 +39,7 @@ import { Button } from '@/components/ui/button'
 import { CreatePostModal } from '@/components/CreatePostModal'
 
 const navItems = [
-  { icon: MessageSquare, label: 'Cluster', path: '/feed' },
+  { icon: MessageSquare, label: 'Cluster', path: '/cluster' },
   { icon: Send, label: 'Chat', path: '/chat' },
   { icon: Bell, label: 'Notifications', path: '/notifications' },
   { icon: HelpCircle, label: 'Q&A', path: '/qa' },
@@ -47,12 +51,28 @@ const navItems = [
 
 export function AppSidebar() {
   const { theme, setTheme } = useTheme()
+  const { signOut, user } = useAuth()
   const pathname = usePathname()
   const { open, toggleSidebar } = useSidebar()
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false)
 
+  const getUserInitials = () => {
+    const name = user?.profile?.full_name || user?.email || ''
+    if (!name) return 'U'
+    return name
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2)
+  }
+
   const handleThemeToggle = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
+  }
+
+  const handleLogout = async () => {
+    await signOut()
   }
 
   const isActive = (path) => pathname === path
@@ -126,7 +146,39 @@ export function AppSidebar() {
 
       {/* Footer with User Info */}
       <SidebarFooter className="border-t border-cyber-border p-4">
-        <div className="space-y-2">
+        <div className="space-y-3">
+          {/* User Profile Section */}
+          {open ? (
+            <div className="space-y-3">
+              <Link href="/profile" className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+                <Avatar className="w-10 h-10">
+                  <AvatarImage src={user?.profile?.profile_picture} />
+                  <AvatarFallback className="bg-neon-purple/20 text-neon-purple">
+                    {getUserInitials()}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">
+                    {user?.profile?.full_name || 'User'}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">
+                    {user?.email}
+                  </p>
+                </div>
+              </Link>
+              <Separator className="bg-cyber-border" />
+            </div>
+          ) : (
+            <Link href="/profile" className="flex justify-center p-2 rounded-lg hover:bg-muted/50 transition-colors cursor-pointer">
+              <Avatar className="w-8 h-8">
+                <AvatarImage src={user?.profile?.profile_picture} />
+                <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-xs">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+            </Link>
+          )}
+
           {/* Theme Toggle */}
           <Button
             variant="ghost"
@@ -136,6 +188,17 @@ export function AppSidebar() {
           >
             {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             {open && <span className="ml-3">Change Theme</span>}
+          </Button>
+
+          {/* Logout Button */}
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleLogout}
+            className={`${open ? 'w-full justify-start' : 'w-full justify-center'} text-destructive hover:text-destructive hover:bg-destructive/10`}
+          >
+            <LogOut className="w-4 h-4" />
+            {open && <span className="ml-3">Logout</span>}
           </Button>
         </div>
       </SidebarFooter>

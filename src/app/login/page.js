@@ -1,8 +1,11 @@
 'use client'
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/contexts/AuthContext';
+import { toast } from '@/components/ui/sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,11 +14,37 @@ import { Separator } from '@/components/ui/separator';
 import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
+  const router = useRouter();
+  const { signIn, signInWithOAuth, user, loading } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
+
+  // Redirect to cluster if already logged in
+  useEffect(() => {
+    if (!loading && user) {
+      router.push('/cluster')
+    }
+  }, [user, loading, router])
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-cyber-dark cyber-bg flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-purple mx-auto"></div>
+          <p className="mt-4 text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Don't render login form if already authenticated
+  if (user) {
+    return null
+  }
 
   const validateForm = () => {
     const newErrors = {};
@@ -42,24 +71,66 @@ export default function LoginPage() {
     }
 
     setIsLoading(true);
+    setErrors({});
     
-    // Simulate loading
-    setTimeout(() => {
-      console.log('Login attempted with:', { email, password });
+    try {
+      const { data, error } = await signIn(email, password);
+
+      if (error) {
+        toast.error(error.message || 'Failed to sign in')
+        setErrors({ submit: error.message });
+        setIsLoading(false);
+        return;
+      }
+
+      // Success notification will be shown by AuthContext
+      // Redirect to cluster on success
+      router.push('/cluster');
+    } catch (error) {
+      toast.error('An unexpected error occurred. Please try again.')
+      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleGoogleSignIn = async () => {
     setIsLoading(true);
-    console.log('Google sign in clicked');
-    setTimeout(() => setIsLoading(false), 1000);
+    setErrors({});
+    
+    try {
+      const { error } = await signInWithOAuth('google');
+
+      if (error) {
+        toast.error(error.message || 'Failed to sign in with Google')
+        setErrors({ submit: error.message });
+        setIsLoading(false);
+      }
+      // Success will be handled by AuthContext
+    } catch (error) {
+      toast.error('Failed to sign in with Google. Please try again.')
+      setErrors({ submit: 'Failed to sign in with Google. Please try again.' });
+      setIsLoading(false);
+    }
   };
 
   const handleMicrosoftSignIn = async () => {
     setIsLoading(true);
-    console.log('Microsoft sign in clicked');
-    setTimeout(() => setIsLoading(false), 1000);
+    setErrors({});
+    
+    try {
+      const { error } = await signInWithOAuth('azure', { scopes: 'email' });
+
+      if (error) {
+        toast.error(error.message || 'Failed to sign in with Microsoft')
+        setErrors({ submit: error.message });
+        setIsLoading(false);
+      }
+      // Success will be handled by AuthContext
+    } catch (error) {
+      toast.error('Failed to sign in with Microsoft. Please try again.')
+      setErrors({ submit: 'Failed to sign in with Microsoft. Please try again.' });
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -183,6 +254,12 @@ export default function LoginPage() {
                   <p className="text-destructive text-sm">{errors.password}</p>
                 )}
               </div>
+
+              {errors.submit && (
+                <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
+                  <p className="text-destructive text-sm">{errors.submit}</p>
+                </div>
+              )}
 
               <Button
                 type="submit"
