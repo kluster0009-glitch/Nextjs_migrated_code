@@ -1,7 +1,0 @@
-project_id = "drgrujwjowotwnhqplmg"
-
-[functions.delete-user]
-verify_jwt = true
-
-[functions.verify-email-domain]
-verify_jwt = false

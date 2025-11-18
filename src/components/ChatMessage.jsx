@@ -1,7 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { User, UserPlus, MessageSquare, Ban, Flag } from 'lucide-react';
-import { BACKEND_URL } from '@/config';
-import { useAuth } from '@/lib/auth-context';
 
 export const ChatMessage = ({
   message,
@@ -11,7 +9,6 @@ export const ChatMessage = ({
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [sendingFriendRequest, setSendingFriendRequest] = useState(false);
   const dropdownRef = useRef(null);
-  const { user, session } = useAuth();
 
   const time = new Date(message.created_at).toLocaleTimeString([], {
     hour: '2-digit',
@@ -20,7 +17,7 @@ export const ChatMessage = ({
   const displayName = message.sender_full_name || 'Member';
   const initials = getInitials(displayName);
 
-  const isSelf = user && user.id === message.sender_id;
+  const isSelf = false; // Auth removed - set to false
 
   const handleViewProfile = (userId) => {
     if (onViewProfile) {
@@ -30,45 +27,9 @@ export const ChatMessage = ({
   };
 
   const onSendFriendRequest = async (userId) => {
-    // Prevent sending request to self (shouldn’t be reachable if isSelf)
-    if (user && user.id === userId) {
-      console.warn('Cannot send a friend request to yourself');
-      setDropdownOpen(false);
-
-    }
-
-    if (sendingFriendRequest) return;
-
-    setSendingFriendRequest(true);
-    try {
-      if (!session?.access_token) {
-        console.warn('No session/token, cannot send friend request');
-
-      }
-
-      const res = await fetch(`${BACKEND_URL}/friends/requests`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ receiver_id: userId }),
-      });
-
-      if (!res.ok) {
-        const errorData = await res.json().catch(() => null);
-        console.error('Failed to send friend request', res.status, errorData);
-
-      }
-
-      const data = await res.json();
-      console.log('Friend request sent:', data);
-    } catch (err) {
-      console.error('Error sending friend request', err);
-    } finally {
-      setSendingFriendRequest(false);
-      setDropdownOpen(false);
-    }
+    // Auth removed - just log the action
+    console.log('Friend request would be sent to:', userId);
+    setDropdownOpen(false);
   };
 
   const onMessageUser = (userId) => {

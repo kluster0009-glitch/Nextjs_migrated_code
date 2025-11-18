@@ -21,9 +21,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
-import { useAuth } from '@/lib/auth-context';
-import { supabase } from '@/integrations/supabase/client';
-import { useToast } from '@/hooks/use-toast';
 import { Loader2, Image as ImageIcon, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -39,8 +36,6 @@ const categories = [
 ];
 
 export function CreatePostModal({ open, onOpenChange, onPostCreated }) {
-  const { user } = useAuth();
-  const { toast } = useToast();
   const [loading, setLoading] = useState(false);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
@@ -50,71 +45,29 @@ export function CreatePostModal({ open, onOpenChange, onPostCreated }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!user) {
-      toast({
-        title: 'Error',
-        description: 'You must be logged in to create a post',
-        variant: 'destructive',
-      });
-
-    }
-
     if (!title.trim() || !content.trim()) {
-      toast({
-        title: 'Error',
-        description: 'Please fill in all required fields',
-        variant: 'destructive',
-      });
-
+      console.error('Please fill in all required fields');
+      return;
     }
 
     setLoading(true);
 
-    try {
-      const { data, error } = await supabase
-        .from('posts')
-        .insert([
-          {
-            user_id: user.id,
-            title: title.trim(),
-            content: content.trim(),
-            category,
-            image_url: imageUrl.trim() || null,
-          },
-        ])
-        .select()
-        .single();
-
-      if (error) throw error;
-
-      toast({
-        title: 'Success!',
-        description: 'Your post h created successfully',
-      });
-
+    // Simulate post creation
+    setTimeout(() => {
+      console.log('Post created:', { title, content, category, imageUrl });
+      
       // Reset form
       setTitle('');
       setContent('');
       setCategory('General');
       setImageUrl('');
-
-      // Close modal
-      onOpenChange(false);
-
-      // Notify parent component
+      setLoading(false);
+      
       if (onPostCreated) {
         onPostCreated();
       }
-    } catch (error) {
-      console.error('Error creating post:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to create post. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setLoading(false);
-    }
+      onOpenChange(false);
+    }, 1000);
   };
 
   const handleClose = () => {

@@ -92,7 +92,7 @@ export default function AuthPage() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session?.user && event === 'SIGNED_IN') {
-          router.push('/feed');
+          router.push('/cluster');
         }
       }
     );
@@ -240,7 +240,7 @@ export default function AuthPage() {
             title: "Welcome back!",
             description: "You've been signed in successfully.",
           });
-          router.push('/feed');
+          router.push('/cluster');
         }
       }
     } catch (error) {

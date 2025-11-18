@@ -2,7 +2,6 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { useAuth } from '@/lib/auth-context'
 import { useTheme } from 'next-themes'
 import { useState } from 'react'
 import { 
@@ -14,8 +13,6 @@ import {
   GraduationCap, 
   Calendar, 
   Trophy,
-  LogOut,
-  User,
   Moon,
   Sun,
   Menu,
@@ -34,7 +31,6 @@ import {
   SidebarHeader,
   useSidebar,
 } from '@/components/ui/sidebar'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Button } from '@/components/ui/button'
 import { CreatePostModal } from '@/components/CreatePostModal'
 
@@ -50,7 +46,6 @@ const navItems = [
 ]
 
 export function AppSidebar() {
-  const { user, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
   const pathname = usePathname()
   const { open, toggleSidebar } = useSidebar()
@@ -58,10 +53,6 @@ export function AppSidebar() {
 
   const handleThemeToggle = () => {
     setTheme(theme === 'dark' ? 'light' : 'dark')
-  }
-
-  const handleLogout = async () => {
-    await signOut()
   }
 
   const isActive = (path) => pathname === path
@@ -136,33 +127,6 @@ export function AppSidebar() {
       {/* Footer with User Info */}
       <SidebarFooter className="border-t border-cyber-border p-4">
         <div className="space-y-2">
-          {/* User Profile */}
-          {open ? (
-            <Link href="/profile" className="flex items-center gap-3 p-2 rounded-lg hover:bg-muted/50 transition-colors">
-              <Avatar className="w-9 h-9">
-                <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                <AvatarFallback className="bg-gradient-to-br from-soft-cyan to-soft-violet text-background text-sm font-semibold">
-                  {user?.email?.[0]?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-foreground truncate">
-                  {user?.user_metadata?.full_name || 'User'}
-                </p>
-                <p className="text-xs text-muted-foreground truncate">{user?.email}</p>
-              </div>
-            </Link>
-          ) : (
-            <Link href="/profile" className="flex items-center justify-center p-2 rounded-lg hover:bg-muted/50 transition-colors">
-              <Avatar className="w-9 h-9">
-                <AvatarImage src={user?.user_metadata?.avatar_url} alt={user?.email} />
-                <AvatarFallback className="bg-gradient-to-br from-soft-cyan to-soft-violet text-background text-sm font-semibold">
-                  {user?.email?.[0]?.toUpperCase() || 'U'}
-                </AvatarFallback>
-              </Avatar>
-            </Link>
-          )}
-
           {/* Theme Toggle */}
           <Button
             variant="ghost"
@@ -172,17 +136,6 @@ export function AppSidebar() {
           >
             {theme === 'dark' ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
             {open && <span className="ml-3">Change Theme</span>}
-          </Button>
-
-          {/* Logout */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleLogout}
-            className={`${open ? 'w-full justify-start' : 'w-full justify-center'} text-destructive hover:bg-destructive/20`}
-          >
-            <LogOut className="w-4 h-4" />
-            {open && <span className="ml-3">Logout</span>}
           </Button>
         </div>
       </SidebarFooter>

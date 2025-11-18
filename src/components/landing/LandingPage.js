@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import Header from '@/components/Header'
 import SplashScreen from '@/components/SplashScreen'
 import LandingHero from '@/components/landing/LandingHero'
@@ -10,26 +9,21 @@ import IntelligenceSection from '@/components/landing/IntelligenceSection'
 import VerifiedSection from '@/components/landing/VerifiedSection'
 import FinalCTA from '@/components/landing/FinalCTA'
 import Footer from '@/components/landing/Footer'
-import { useAuth } from '@/lib/auth-context'
 
 export default function LandingPage() {
   const [showSplash, setShowSplash] = useState(true)
   const [hasVisited, setHasVisited] = useState(false)
-  const { user } = useAuth()
-  const router = useRouter()
+  
 
   useEffect(() => {
-    if (user) {
-      router.push('/feed')
-      return
-    }
+ 
 
     const visited = sessionStorage.getItem('hasVisitedKluster')
     if (visited) {
       setShowSplash(false)
       setHasVisited(true)
     }
-  }, [user, router])
+  }, [])
 
   const handleSplashComplete = () => {
     setShowSplash(false)
