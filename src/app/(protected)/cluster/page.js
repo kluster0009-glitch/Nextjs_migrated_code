@@ -147,13 +147,10 @@ export default function ClusterPage() {
   return (
     <div className="min-h-screen bg-cyber-darker">
       {/* Main Content */}
-      <div className="container mx-auto px-4 py-6">
+      <div className="w-full py-6 px-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Left Sidebar - Hidden on mobile */}
-          <div className="hidden lg:block lg:col-span-2"></div>
-
           {/* Main Feed */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-9">
             {/* Carousel Banner */}
             <NoticeCarousel />
 

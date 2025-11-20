@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useTheme } from 'next-themes'
 import { useAuth } from '@/contexts/AuthContext'
@@ -88,7 +89,14 @@ export function AppSidebar() {
       <SidebarHeader className="border-b border-cyber-border p-2">
         <div className={`flex items-center gap-0 ${open ? 'justify-between' : 'justify-center'}`}>
           {open && (
-            <Link href="/" className="flex items-center gap-0 flex-1">
+            <Link href="/" className="flex items-center gap-2 flex-1">
+              <Image 
+                src="/logo.svg" 
+                alt="Kluster Logo" 
+                width={28} 
+                height={28}
+                className="flex-shrink-0"
+              />
               <span className="text-lg font-semibold font-space bg-gradient-to-r from-soft-cyan to-soft-violet bg-clip-text text-transparent">
                 KLUSTER
               </span>

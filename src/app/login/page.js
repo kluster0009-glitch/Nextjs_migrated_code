@@ -15,12 +15,15 @@ import { Eye, EyeOff, Mail, Lock, ArrowLeft } from 'lucide-react';
 
 export default function LoginPage() {
   const router = useRouter();
-  const { signIn, signInWithOAuth, user, loading } = useAuth();
+  const { signIn, signInWithOAuth, user, loading, resendVerificationEmail } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [showResendModal, setShowResendModal] = useState(false);
+  const [resendEmail, setResendEmail] = useState('');
+  const [isResending, setIsResending] = useState(false);
 
   // Redirect to cluster if already logged in
   useEffect(() => {
@@ -29,7 +32,6 @@ export default function LoginPage() {
     }
   }, [user, loading, router])
 
-  // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen bg-cyber-dark cyber-bg flex items-center justify-center">
@@ -41,10 +43,7 @@ export default function LoginPage() {
     )
   }
 
-  // Don't render login form if already authenticated
-  if (user) {
-    return null
-  }
+  if (user) return null
 
   const validateForm = () => {
     const newErrors = {};
@@ -65,72 +64,60 @@ export default function LoginPage() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    setErrors({});
     
-    if (!validateForm()) {
+    const { error } = await signIn(email, password);
+
+    if (error) {
+      const errorMessage = error.message || 'Failed to sign in';
+      toast.error(errorMessage);
+      
+      // Check if it's an email confirmation error
+      if (errorMessage.includes('Email not confirmed') || errorMessage.includes('not confirmed')) {
+        setErrors({ submit: errorMessage, needsVerification: true });
+      } else {
+        setErrors({ submit: errorMessage });
+      }
+      setIsLoading(false);
+    } else {
+      router.push('/cluster');
+    }
+  };
+
+  const handleOAuth = async (provider) => {
+    setIsLoading(true);
+    const { error } = await signInWithOAuth(provider, provider === 'azure' ? { scopes: 'email' } : {});
+    if (error) {
+      toast.error(error.message || `Failed to sign in with ${provider}`)
+      setIsLoading(false);
+    }
+  };
+
+  const handleResendVerification = async () => {
+    if (!resendEmail) {
+      toast.error('Please enter your email address');
       return;
     }
 
-    setIsLoading(true);
-    setErrors({});
-    
-    try {
-      const { data, error } = await signIn(email, password);
-
-      if (error) {
-        toast.error(error.message || 'Failed to sign in')
-        setErrors({ submit: error.message });
-        setIsLoading(false);
-        return;
-      }
-
-      // Success notification will be shown by AuthContext
-      // Redirect to cluster on success
-      router.push('/cluster');
-    } catch (error) {
-      toast.error('An unexpected error occurred. Please try again.')
-      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
-      setIsLoading(false);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(resendEmail)) {
+      toast.error('Please enter a valid email address');
+      return;
     }
-  };
 
-  const handleGoogleSignIn = async () => {
-    setIsLoading(true);
-    setErrors({});
-    
-    try {
-      const { error } = await signInWithOAuth('google');
+    setIsResending(true);
+    const { error } = await resendVerificationEmail(resendEmail);
 
-      if (error) {
-        toast.error(error.message || 'Failed to sign in with Google')
-        setErrors({ submit: error.message });
-        setIsLoading(false);
-      }
-      // Success will be handled by AuthContext
-    } catch (error) {
-      toast.error('Failed to sign in with Google. Please try again.')
-      setErrors({ submit: 'Failed to sign in with Google. Please try again.' });
-      setIsLoading(false);
+    if (error) {
+      toast.error(error.message || 'Failed to resend verification email. Make sure you have signed up with this email.');
+    } else {
+      toast.success('Verification email sent! Please check your inbox.');
+      setShowResendModal(false);
+      setResendEmail('');
     }
-  };
-
-  const handleMicrosoftSignIn = async () => {
-    setIsLoading(true);
-    setErrors({});
-    
-    try {
-      const { error } = await signInWithOAuth('azure', { scopes: 'email' });
-
-      if (error) {
-        toast.error(error.message || 'Failed to sign in with Microsoft')
-        setErrors({ submit: error.message });
-        setIsLoading(false);
-      }
-      // Success will be handled by AuthContext
-    } catch (error) {
-      toast.error('Failed to sign in with Microsoft. Please try again.')
-      setErrors({ submit: 'Failed to sign in with Microsoft. Please try again.' });
-      setIsLoading(false);
-    }
+    setIsResending(false);
   };
 
   return (
@@ -174,7 +161,7 @@ export default function LoginPage() {
               <Button
                 variant="outline"
                 className="w-full border-cyber-border hover:bg-muted/50 hover:text-foreground"
-                onClick={handleGoogleSignIn}
+                onClick={() => handleOAuth('google')}
                 disabled={isLoading}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -189,7 +176,7 @@ export default function LoginPage() {
               <Button
                 variant="outline"
                 className="w-full border-cyber-border hover:bg-muted/50 hover:text-foreground"
-                onClick={handleMicrosoftSignIn}
+                onClick={() => handleOAuth('azure')}
                 disabled={isLoading}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -231,7 +218,25 @@ export default function LoginPage() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="password" className="text-foreground">Password</Label>
+                <div className="flex items-center justify-between">
+                  <Label htmlFor="password" className="text-foreground">Password</Label>
+                  <div className="flex items-center gap-2">
+                    <Link
+                      href="/forgot-password"
+                      className="text-xs text-neon-purple hover:text-neon-cyan transition-colors"
+                    >
+                      Forgot password?
+                    </Link>
+                    <span className="text-muted-foreground text-xs">•</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowResendModal(true)}
+                      className="text-xs text-neon-purple hover:text-neon-cyan transition-colors"
+                    >
+                      Resend Verification
+                    </button>
+                  </div>
+                </div>
                 <div className="relative">
                   <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -258,6 +263,11 @@ export default function LoginPage() {
               {errors.submit && (
                 <div className="p-3 bg-destructive/10 border border-destructive/20 rounded-md">
                   <p className="text-destructive text-sm">{errors.submit}</p>
+                  {errors.needsVerification && (
+                    <p className="text-muted-foreground text-xs mt-2">
+                      Resend verification mail to confirm
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -283,6 +293,61 @@ export default function LoginPage() {
             </div>
           </CardContent>
         </Card>
+
+        {/* Resend Verification Modal */}
+        {showResendModal && (
+          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+            <Card className="w-full max-w-md glow-border bg-cyber-card/95 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle className="text-xl font-bold bg-gradient-to-r from-neon-purple to-neon-cyan bg-clip-text text-transparent">
+                  Resend Verification Email
+                </CardTitle>
+                <CardDescription className="text-muted-foreground">
+                  Enter your email to receive a new verification link
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="resendEmail" className="text-foreground">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="resendEmail"
+                      type="email"
+                      placeholder="Enter your email"
+                      className="pl-10 bg-input border-cyber-border focus:border-neon-purple"
+                      value={resendEmail}
+                      onChange={(e) => setResendEmail(e.target.value)}
+                      disabled={isResending}
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="flex-1 border-cyber-border"
+                    onClick={() => {
+                      setShowResendModal(false);
+                      setResendEmail('');
+                    }}
+                    disabled={isResending}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 bg-gradient-to-r from-neon-purple to-neon-cyan hover:opacity-90 text-black font-semibold"
+                    onClick={handleResendVerification}
+                    disabled={isResending}
+                  >
+                    {isResending ? 'Sending...' : 'Send'}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </div>
     </div>
   );

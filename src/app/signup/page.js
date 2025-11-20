@@ -15,7 +15,7 @@ import { Eye, EyeOff, Mail, Lock, User, ArrowLeft } from 'lucide-react';
 
 export default function SignupPage() {
   const router = useRouter();
-  const { signUp, signInWithOAuth, user, loading } = useAuth();
+  const { signUp, signInWithOAuth, user, loading, resendVerificationEmail } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +24,8 @@ export default function SignupPage() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState({});
+  const [showResendVerification, setShowResendVerification] = useState(false);
+  const [signupEmail, setSignupEmail] = useState('');
 
   // Redirect to cluster if already logged in
   useEffect(() => {
@@ -32,7 +34,6 @@ export default function SignupPage() {
     }
   }, [user, loading, router])
 
-  // Show loading state while checking authentication
   if (loading) {
     return (
       <div className="min-h-screen bg-cyber-dark cyber-bg flex items-center justify-center">
@@ -44,10 +45,7 @@ export default function SignupPage() {
     )
   }
 
-  // Don't render signup form if already authenticated
-  if (user) {
-    return null
-  }
+  if (user) return null
 
   const validateForm = () => {
     const newErrors = {};
@@ -80,80 +78,56 @@ export default function SignupPage() {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+    setErrors({});
     
-    if (!validateForm()) {
+    const { data, error } = await signUp(email, password, { full_name: fullName });
+
+    if (error) {
+      toast.error(error.message || 'Failed to create account')
+      setErrors({ submit: error.message });
+      setIsLoading(false);
+      return;
+    }
+
+    if (data?.user?.identities?.length === 0) {
+      toast.error('An account with this email already exists.')
+      setErrors({ submit: 'An account with this email already exists.' });
+      setIsLoading(false);
+      return;
+    }
+
+    // Store email for resend verification
+    setSignupEmail(email);
+    setShowResendVerification(true);
+    toast.success('Welcome aboard! 🎉 Please check your email to verify your account.')
+    setIsLoading(false);
+  };
+
+  const handleResendVerification = async () => {
+    if (!signupEmail) {
+      toast.error('Please sign up first before requesting verification email.')
       return;
     }
 
     setIsLoading(true);
-    setErrors({});
-    
-    try {
-      const { data, error } = await signUp(email, password, {
-        full_name: fullName,
-      });
+    const { error } = await resendVerificationEmail(signupEmail);
 
-      if (error) {
-        toast.error(error.message || 'Failed to create account')
-        setErrors({ submit: error.message });
-        setIsLoading(false);
-        return;
-      }
-
-      // Check if email confirmation is required
-      if (data?.user?.identities?.length === 0) {
-        toast.error('An account with this email already exists.')
-        setErrors({ submit: 'An account with this email already exists.' });
-        setIsLoading(false);
-        return;
-      }
-
-      // Show success message and redirect to login
-      toast.success('Welcome aboard! 🎉 Please check your email to verify your account.')
-      router.push('/login');
-    } catch (error) {
-      toast.error('An unexpected error occurred. Please try again.')
-      setErrors({ submit: 'An unexpected error occurred. Please try again.' });
-      setIsLoading(false);
+    if (error) {
+      toast.error(error.message || 'Failed to resend verification email')
+    } else {
+      toast.success('Verification email sent! Please check your inbox.')
     }
+    setIsLoading(false);
   };
 
-  const handleGoogleSignIn = async () => {
+  const handleOAuth = async (provider) => {
     setIsLoading(true);
-    setErrors({});
-    
-    try {
-      const { error } = await signInWithOAuth('google');
-
-      if (error) {
-        toast.error(error.message || 'Failed to sign in with Google')
-        setErrors({ submit: error.message });
-        setIsLoading(false);
-      }
-      // Success will be handled by AuthContext
-    } catch (error) {
-      toast.error('Failed to sign in with Google. Please try again.')
-      setErrors({ submit: 'Failed to sign in with Google. Please try again.' });
-      setIsLoading(false);
-    }
-  };
-
-  const handleMicrosoftSignIn = async () => {
-    setIsLoading(true);
-    setErrors({});
-    
-    try {
-      const { error } = await signInWithOAuth('azure', { scopes: 'email' });
-
-      if (error) {
-        toast.error(error.message || 'Failed to sign in with Microsoft')
-        setErrors({ submit: error.message });
-        setIsLoading(false);
-      }
-      // Success will be handled by AuthContext
-    } catch (error) {
-      toast.error('Failed to sign in with Microsoft. Please try again.')
-      setErrors({ submit: 'Failed to sign in with Microsoft. Please try again.' });
+    const { error } = await signInWithOAuth(provider, provider === 'azure' ? { scopes: 'email' } : {});
+    if (error) {
+      toast.error(error.message || `Failed to sign in with ${provider}`)
       setIsLoading(false);
     }
   };
@@ -199,7 +173,7 @@ export default function SignupPage() {
               <Button
                 variant="outline"
                 className="w-full border-cyber-border hover:bg-muted/50 hover:text-foreground"
-                onClick={handleGoogleSignIn}
+                onClick={() => handleOAuth('google')}
                 disabled={isLoading}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -214,7 +188,7 @@ export default function SignupPage() {
               <Button
                 variant="outline"
                 className="w-full border-cyber-border hover:bg-muted/50 hover:text-foreground"
-                onClick={handleMicrosoftSignIn}
+                onClick={() => handleOAuth('azure')}
                 disabled={isLoading}
               >
                 <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
@@ -336,6 +310,35 @@ export default function SignupPage() {
                 {isLoading ? 'Loading...' : 'Join Now'}
               </Button>
             </form>
+
+            {showResendVerification && (
+              <div className="space-y-3 p-4 bg-neon-cyan/10 border border-neon-cyan/20 rounded-lg">
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-foreground font-medium">
+                    Didn't receive the verification email?
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Check your spam folder or click below to resend
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full border-neon-cyan/30 hover:bg-neon-cyan/20 text-neon-cyan"
+                  onClick={handleResendVerification}
+                  disabled={isLoading}
+                >
+                  {isLoading ? 'Sending...' : 'Resend Verification Email'}
+                </Button>
+                <div className="text-center">
+                  <Link
+                    href="/login"
+                    className="text-xs text-neon-purple hover:text-neon-cyan transition-colors"
+                  >
+                    Already verified? Sign in →
+                  </Link>
+                </div>
+              </div>
+            )}
 
             <div className="text-center text-sm">
               <span className="text-muted-foreground">
