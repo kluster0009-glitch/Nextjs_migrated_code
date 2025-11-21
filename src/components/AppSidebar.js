@@ -26,6 +26,7 @@ import {
   Bell,
   LogOut,
   Search,
+  Rocket,
 } from "lucide-react";
 import UnreadMessagesIndicator from "@/components/UnreadMessagesIndicator";
 import {
@@ -48,9 +49,8 @@ const navItems = [
   { icon: MessageSquare, label: "Cluster", path: "/cluster" },
   { icon: Send, label: "Chat", path: "/chat" },
   { icon: Bell, label: "Notifications", path: "/notifications" },
-  { icon: HelpCircle, label: "Q&A", path: "/qa" },
+  { icon: Rocket, label: "Startups", path: "/startups" },
   { icon: BookOpen, label: "Library", path: "/library" },
-  { icon: GraduationCap, label: "Professor", path: "/professor" },
   { icon: CalendarDays, label: "Calendar", path: "/calendar" },
   { icon: Calendar, label: "Events", path: "/events" },
   { icon: Trophy, label: "Leaderboard", path: "/leaderboard" },
