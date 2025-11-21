@@ -13,7 +13,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { InviteMemberDialog } from "@/components/InviteMemberDialog";
-import CreateGroupDialog from "@/components/CreateGroupDialog";
+import {CreateGroupDialog} from "@/components/CreateGroupDialog";
 
 
 import {
