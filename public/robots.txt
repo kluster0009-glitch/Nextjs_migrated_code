@@ -1,5 +1,5 @@
 # KLUSTER - Campus Communication Platform
-# https://kluster.app
+# https://kluster.in
 
 User-agent: *
 Allow: /
@@ -28,4 +28,4 @@ User-agent: facebookexternalhit
 Allow: /
 
 # Sitemap location
-Sitemap: https://kluster.app/sitemap.xml
+Sitemap: https://kluster.in/sitemap.xml

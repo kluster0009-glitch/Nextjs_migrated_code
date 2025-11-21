@@ -161,7 +161,7 @@ KLUSTER is a secure, all-in-one campus communication platform that eliminates ap
 - Hosted on Vercel
 - Automatic deployments from main branch
 - Environment variables configured in Vercel dashboard
-- Custom domain: kluster.app
+- Custom domain: kluster.in
 
 ## Target Audience
 
@@ -181,7 +181,7 @@ KLUSTER is a secure, all-in-one campus communication platform that eliminates ap
 
 ## Support
 
-- Email: support@kluster.app
+- Email: support@kluster.in
 - Twitter: @KlusterApp
 - GitHub: github.com/kluster0009-glitch
 

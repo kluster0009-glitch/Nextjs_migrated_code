@@ -7,7 +7,7 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata = {
-  metadataBase: new URL("https://kluster.app"),
+  metadataBase: new URL("https://kluster.in"),
   title: {
     default: "KLUSTER - Transform Your Campus Into a Connected Community",
     template: "%s | KLUSTER",
@@ -45,7 +45,7 @@ export const metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://kluster.app/",
+    url: "https://kluster.in/",
     siteName: "KLUSTER",
     title: "KLUSTER - Transform Your Campus Into a Connected Community",
     description:
@@ -96,7 +96,7 @@ export default function RootLayout({ children }) {
     "@context": "https://schema.org",
     "@type": "WebApplication",
     name: "KLUSTER",
-    url: "https://kluster.app",
+    url: "https://kluster.in",
     description:
       "A secure campus communication platform that unifies social networking, Q&A forums, classroom integration, and real-time collaboration for university communities.",
     applicationCategory: "EducationalApplication",
@@ -109,7 +109,7 @@ export default function RootLayout({ children }) {
     creator: {
       "@type": "Organization",
       name: "KLUSTER",
-      url: "https://kluster.app",
+      url: "https://kluster.in",
     },
     featureList: [
       "Secure campus social networking",
@@ -136,8 +136,8 @@ export default function RootLayout({ children }) {
     "@context": "https://schema.org",
     "@type": "Organization",
     name: "KLUSTER",
-    url: "https://kluster.app",
-    logo: "https://kluster.app/assets/kluster-logo.png",
+    url: "https://kluster.in",
+    logo: "https://kluster.in/assets/kluster-logo.png",
     description:
       "KLUSTER is a secure, all-in-one campus communication platform that eliminates app chaos by unifying social networking, academic collaboration, and student engagement tools.",
     foundingDate: "2024",
@@ -150,7 +150,7 @@ export default function RootLayout({ children }) {
     contactPoint: {
       "@type": "ContactPoint",
       contactType: "Customer Support",
-      email: "support@kluster.app",
+      email: "support@kluster.in",
       availableLanguage: ["English"],
     },
   };

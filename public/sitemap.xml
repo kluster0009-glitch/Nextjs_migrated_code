@@ -6,7 +6,7 @@
   
   <!-- Homepage -->
   <url>
-    <loc>https://kluster.app/</loc>
+    <loc>https://kluster.in/</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>1.0</priority>
@@ -14,14 +14,14 @@
   
   <!-- Authentication Pages -->
   <url>
-    <loc>https://kluster.app/login</loc>
+    <loc>https://kluster.in/login</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/signup</loc>
+    <loc>https://kluster.in/signup</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.8</priority>
@@ -29,70 +29,70 @@
   
   <!-- Main Features -->
   <url>
-    <loc>https://kluster.app/cluster</loc>
+    <loc>https://kluster.in/cluster</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.9</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/chat</loc>
+    <loc>https://kluster.in/chat</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>always</changefreq>
     <priority>0.9</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/startups</loc>
+    <loc>https://kluster.in/startups</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/events</loc>
+    <loc>https://kluster.in/events</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/calendar</loc>
+    <loc>https://kluster.in/calendar</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.7</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/library</loc>
+    <loc>https://kluster.in/library</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.7</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/leaderboard</loc>
+    <loc>https://kluster.in/leaderboard</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/notifications</loc>
+    <loc>https://kluster.in/notifications</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>always</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/profile</loc>
+    <loc>https://kluster.in/profile</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>weekly</changefreq>
     <priority>0.6</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/settings</loc>
+    <loc>https://kluster.in/settings</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
@@ -100,21 +100,21 @@
   
   <!-- Legal Pages -->
   <url>
-    <loc>https://kluster.app/privacy</loc>
+    <loc>https://kluster.in/privacy</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/terms</loc>
+    <loc>https://kluster.in/terms</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.5</priority>
   </url>
   
   <url>
-    <loc>https://kluster.app/cookies</loc>
+    <loc>https://kluster.in/cookies</loc>
     <lastmod>2025-11-22</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.4</priority>
