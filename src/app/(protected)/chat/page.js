@@ -13,7 +13,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { InviteMemberDialog } from "@/components/InviteMemberDialog";
-import {CreateGroupDialog} from "@/components/CreateGroupDialog";
 
 
 import {
@@ -63,6 +62,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 export default function ChatPage() {
   const { user } = useAuth();
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [newGroupName, setNewGroupName] = useState("");
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const { profile, getAvatarUrl } = useProfile();
   const router = useRouter();
@@ -100,18 +100,17 @@ export default function ChatPage() {
     setTotalUnread(total);
   }, [conversations]);
 
-  const handleCreateGroup = async (rawName) => {
-    const name = rawName.trim();
+  const handleCreateGroup = async () => {
+    const name = newGroupName.trim();
     if (!name) {
       toast.error("Please enter a group name");
       return;
     }
 
     await createGroupConversation(name);
+    setNewGroupName("");
     setIsCreateGroupOpen(false);
   };
-
-
 
   const handleCopyGroupLink = async () => {
     if (!selectedChat?.id || !selectedChat.isGroup) return;
@@ -832,6 +831,24 @@ export default function ChatPage() {
     }
   };
 
+  const inviteToGroup = async (conversationId, userIdToInvite) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversation_participants")
+        .insert({
+          conversation_id: conversationId,
+          user_id: userIdToInvite,
+        });
+
+      if (error) throw error;
+      toast.success("Member invited");
+    } catch (error) {
+      console.error("Error inviting member:", error);
+      toast.error("Failed to invite member");
+    }
+  };
+
   const leaveConversation = async (conversationId) => {
     try {
       const supabase = createClient();
@@ -908,11 +925,39 @@ export default function ChatPage() {
         conversationId={selectedChat?.id}
       />
 
-      <CreateGroupDialog
-        open={isCreateGroupOpen}
-        onOpenChange={setIsCreateGroupOpen}
-        onCreateGroup={handleCreateGroup}
-      />
+      <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
+        <DialogContent className="bg-cyber-card border-cyber-border">
+          <DialogHeader>
+            <DialogTitle>Create Group</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 mt-2">
+            <Input
+              value={newGroupName}
+              onChange={(e) => setNewGroupName(e.target.value)}
+              placeholder="Enter group name"
+              className="bg-cyber-darker border-cyber-border"
+            />
+            {/* Later you can add member selection here */}
+          </div>
+          <DialogFooter className="mt-4">
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setIsCreateGroupOpen(false);
+                setNewGroupName("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateGroup}
+              className="bg-neon-purple/80 text-black"
+            >
+              Create
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="flex h-full">
         {/* Conversations Sidebar */}
