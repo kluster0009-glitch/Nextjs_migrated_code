@@ -12,6 +12,10 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
+import { InviteMemberDialog } from "@/components/InviteMemberDialog";
+import CreateGroupDialog from "@/components/CreateGroupDialog";
+
+
 import {
   Tooltip,
   TooltipContent,
@@ -31,13 +35,35 @@ import {
   CheckCheck,
   Loader2,
   ArrowLeft,
+  Plus, Users, Trash2, LogOut, UserPlus
 } from "lucide-react";
+
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
+
+
 import { formatDistanceToNow } from "date-fns";
 import { toast } from "sonner";
 import { useRouter, useSearchParams } from "next/navigation";
 
 export default function ChatPage() {
   const { user } = useAuth();
+  const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const { profile, getAvatarUrl } = useProfile();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -73,6 +99,37 @@ export default function ChatPage() {
     );
     setTotalUnread(total);
   }, [conversations]);
+
+  const handleCreateGroup = async (rawName) => {
+    const name = rawName.trim();
+    if (!name) {
+      toast.error("Please enter a group name");
+      return;
+    }
+
+    await createGroupConversation(name);
+    setIsCreateGroupOpen(false);
+  };
+
+
+
+  const handleCopyGroupLink = async () => {
+    if (!selectedChat?.id || !selectedChat.isGroup) return;
+
+    try {
+      const origin =
+        typeof window !== "undefined" ? window.location.origin : "";
+      const link = `${origin}/chat?group=${selectedChat.id}`;
+
+      await navigator.clipboard.writeText(link);
+      toast.success("Invite link copied to clipboard");
+    } catch (err) {
+      console.error("Error copying invite link:", err);
+      toast.error("Failed to copy link");
+    }
+  };
+
+
 
   // Fetch conversations
   const fetchConversations = async () => {
@@ -139,48 +196,87 @@ export default function ChatPage() {
       }
 
       // For each conversation, get the other participant and last message
+      // For each conversation, get participants, last message, etc.
       const conversationsWithDetails = await Promise.all(
         convData.map(async (conv) => {
           console.log("Processing conversation:", conv.id);
 
           // Get ALL participants (RLS only lets us see participants for conversations we're in)
-          const { data: allParticipants, error: participantsError } =
-            await supabase
-              .from("conversation_participants")
-              .select("user_id")
-              .eq("conversation_id", conv.id);
+          const { data: allParticipants, error: participantsError } = await supabase
+            .from("conversation_participants")
+            .select("user_id")
+            .eq("conversation_id", conv.id);
 
           console.log("All participants for", conv.id, ":", {
             allParticipants,
             participantsError,
           });
 
-          if (
-            participantsError ||
-            !allParticipants ||
-            allParticipants.length === 0
-          ) {
+          if (participantsError || !allParticipants || allParticipants.length === 0) {
             console.warn("No participants found for conversation:", conv.id);
             return null;
           }
 
-          // Filter out current user to get other participant(s)
-          const otherParticipants = allParticipants.filter(
-            (p) => p.user_id !== user.id
-          );
+          const participantIds = allParticipants.map((p) => p.user_id);
+          const otherParticipantIds = participantIds.filter((id) => id !== user.id);
 
-          if (otherParticipants.length === 0) {
-            console.warn(
-              "No other participant found for conversation:",
-              conv.id
+          // Get last message (don't use .single() as there might be no messages)
+          const { data: lastMessages, error: messagesError } = await supabase
+            .from("dm_messages")
+            .select("*")
+            .eq("conversation_id", conv.id)
+            .eq("is_deleted", false)
+            .order("created_at", { ascending: false })
+            .limit(1);
+
+          const lastMessageData =
+            lastMessages && lastMessages.length > 0 ? lastMessages[0] : null;
+          console.log("Last message for", conv.id, ":", {
+            lastMessageData,
+            messagesError,
+          });
+
+          // Count unread messages for this user
+          const userParticipation = participations.find(
+            (p) => p.conversation_id === conv.id
+          );
+          const { data: unreadMessages } = await supabase
+            .from("dm_messages")
+            .select("id")
+            .eq("conversation_id", conv.id)
+            .neq("sender_id", user.id)
+            .gt(
+              "created_at",
+              userParticipation?.last_read_at || new Date(0).toISOString()
             );
+
+          const unreadCount = unreadMessages?.length || 0;
+
+          // 🔹 If it's a group conversation
+          if (conv.is_group) {
+            const conversationObj = {
+              id: conv.id,
+              isGroup: true,
+              groupName: conv.group_name || "Group",
+              participantCount: allParticipants.length,
+              lastMessage: lastMessageData,
+              unreadCount,
+              updatedAt: conv.updated_at,
+            };
+
+            console.log("Built GROUP conversation object:", conversationObj);
+            return conversationObj;
+          }
+
+          // 🔹 Else, it's a DM (existing behaviour)
+          if (otherParticipantIds.length === 0) {
+            console.warn("No other participant found for conversation:", conv.id);
             return null;
           }
 
-          const otherUserId = otherParticipants[0].user_id;
+          const otherUserId = otherParticipantIds[0];
           console.log("Other user ID:", otherUserId);
 
-          // Get other user's profile
           const { data: otherUserProfile, error: profileError } = await supabase
             .from("profiles")
             .select("id, full_name, profile_picture")
@@ -197,49 +293,22 @@ export default function ChatPage() {
             return null;
           }
 
-          // Get last message (don't use .single() as there might be no messages)
-          const { data: lastMessages, error: messagesError } = await supabase
-            .from("dm_messages")
-            .select("*")
-            .eq("conversation_id", conv.id)
-            .order("created_at", { ascending: false })
-            .limit(1);
-
-          const lastMessageData =
-            lastMessages && lastMessages.length > 0 ? lastMessages[0] : null;
-          console.log("Last message for", conv.id, ":", {
-            lastMessageData,
-            messagesError,
-          });
-
-          // Count unread messages
-          const userParticipation = participations.find(
-            (p) => p.conversation_id === conv.id
-          );
-          const { data: unreadMessages } = await supabase
-            .from("dm_messages")
-            .select("id")
-            .eq("conversation_id", conv.id)
-            .neq("sender_id", user.id)
-            .gt(
-              "created_at",
-              userParticipation?.last_read_at || new Date(0).toISOString()
-            );
-
-          const unreadCount = unreadMessages?.length || 0;
-
           const conversationObj = {
             id: conv.id,
+            isGroup: false,
             otherUser: otherUserProfile,
             lastMessage: lastMessageData,
-            unreadCount: unreadCount,
+            unreadCount,
             updatedAt: conv.updated_at,
           };
 
-          console.log("Built conversation object:", conversationObj);
+          console.log("Built DM conversation object:", conversationObj);
           return conversationObj;
         })
       );
+
+
+
 
       const validConversations = conversationsWithDetails.filter(
         (c) => c !== null
@@ -295,13 +364,97 @@ export default function ChatPage() {
     }
   };
 
+  const joinGroupFromLink = async (groupId) => {
+    if (!user?.id || !groupId) return;
+
+    try {
+      const supabase = createClient();
+
+      // 1) Try to join the group by inserting into conversation_participants
+      const { error: partError } = await supabase
+        .from("conversation_participants")
+        .insert({
+          conversation_id: groupId,
+          user_id: user.id,
+        });
+
+      if (partError) {
+        // 23505 = unique_violation (already a participant)
+        if (partError.code === "23505") {
+          console.log("User is already a member of this group");
+        } else if (partError.code === "23503") {
+          // 23503 = foreign_key_violation (conversation_id doesn't exist)
+          console.error("Invalid group link (FK violation):", partError);
+          toast.error("Invalid or expired group link");
+          return;
+        } else {
+          throw partError;
+        }
+      }
+
+      // 2) Now we are a participant, SELECT is allowed by RLS
+      const { data: conv, error: convError } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("id", groupId)
+        .maybeSingle(); // safer than .single()
+
+      if (convError) {
+        console.error("Error fetching conversation after join:", convError);
+        toast.error("Failed to open group");
+        return;
+      }
+
+      if (!conv || !conv.is_group) {
+        toast.error("This is not a valid group");
+        return;
+      }
+
+      // 3) Build chat object for sidebar / header
+      const newChat = {
+        id: conv.id,
+        isGroup: true,
+        groupName: conv.group_name || "Group",
+        lastMessage: null,
+        unreadCount: 0,
+        updatedAt: conv.updated_at,
+      };
+
+      // 4) Add to conversation list if not already there
+      setConversations((prev) => {
+        if (prev.some((c) => c.id === conv.id)) return prev;
+        return [newChat, ...prev];
+      });
+
+      // 5) Select this chat and load messages
+      setSelectedChat(newChat);
+      await fetchMessages(conv.id);
+
+      // 6) Clean URL
+      router.replace("/chat");
+
+      toast.success("Joined group via invite link");
+    } catch (error) {
+      console.error("Error joining group from link:", error);
+      toast.error("Failed to join group");
+    }
+  };
+
+
   // Handle new conversation from URL parameter
   useEffect(() => {
     const otherUserId = searchParams?.get("user");
-    if (otherUserId && user) {
-      startNewConversation(otherUserId);
+    const groupId = searchParams?.get("group");
+
+    if (user) {
+      if (otherUserId) {
+        startNewConversation(otherUserId);
+      } else if (groupId) {
+        joinGroupFromLink(groupId);
+      }
     }
   }, [searchParams, user]);
+
 
   // Start new conversation or open existing one
   const startNewConversation = async (otherUserId) => {
@@ -327,6 +480,7 @@ export default function ChatPage() {
 
       const newChat = {
         id: conversationId,
+        isGroup: false,
         otherUser: otherUserProfile,
         lastMessage: null,
         unreadCount: 0,
@@ -552,17 +706,27 @@ export default function ChatPage() {
 
   const filteredConversations = conversations.filter((conv) => {
     // Search filter
-    const matchesSearch = conv.otherUser?.full_name
+    const displayName = conv.isGroup
+      ? conv.groupName
+      : conv.otherUser?.full_name;
+    const matchesSearch = displayName
       ?.toLowerCase()
       .includes(searchQuery.toLowerCase());
 
-    // Tab filter
+    if (!matchesSearch) return false;
+
     if (activeTab === "unread") {
-      return matchesSearch && conv.unreadCount > 0;
+      return conv.unreadCount > 0;
     }
-    // For now, other tabs show all conversations
-    return matchesSearch;
+
+    if (activeTab === "groups") {
+      return conv.isGroup;
+    }
+
+    // "all", "favourites", "community" etc -> show everything for now
+    return true;
   });
+
 
   const tabs = [
     { id: "all", label: "All" },
@@ -612,14 +776,149 @@ export default function ChatPage() {
     setIsDragging(false);
   };
 
+  const createGroupConversation = async (groupName, memberIds = []) => {
+    if (!user?.id) return;
+
+    try {
+      const supabase = createClient();
+
+      // 1) Create group conversation
+      const { data: conv, error: convError } = await supabase
+        .from("conversations")
+        .insert({
+          is_group: true,
+          group_name: groupName,
+          // created_by: user.id,
+        })
+        .select()
+        .single();
+
+      if (convError) throw convError;
+
+      // 2) Add participants: creator + members
+      const participants = [
+        { conversation_id: conv.id, user_id: user.id },
+        ...memberIds.map((id) => ({
+          conversation_id: conv.id,
+          user_id: id,
+        })),
+      ];
+
+      const { error: partError } = await supabase
+        .from("conversation_participants")
+        .insert(participants);
+
+      if (partError) throw partError;
+
+      // 3) Add to local state & open it
+      const newChat = {
+        id: conv.id,
+        isGroup: true,
+        groupName: conv.group_name || groupName,
+        participantCount: participants.length,
+        lastMessage: null,
+        unreadCount: 0,
+        updatedAt: conv.created_at,
+      };
+
+      setConversations((prev) => [newChat, ...prev]);
+      setSelectedChat(newChat);
+      setMessages([]);
+
+      toast.success("Group created");
+    } catch (error) {
+      console.error("Error creating group:", error);
+      toast.error("Failed to create group");
+    }
+  };
+
+  const leaveConversation = async (conversationId) => {
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("conversation_participants")
+        .delete()
+        .eq("conversation_id", conversationId)
+        .eq("user_id", user.id);
+
+      if (error) throw error;
+
+      setConversations((prev) =>
+        prev.filter((c) => c.id !== conversationId)
+      );
+      if (selectedChat?.id === conversationId) {
+        setSelectedChat(null);
+        setMessages([]);
+      }
+
+      toast.success("You left the conversation");
+    } catch (error) {
+      console.error("Error leaving conversation:", error);
+      toast.error("Failed to leave conversation");
+    }
+  };
+
+  const deleteConversation = async (conversationId) => {
+    try {
+      const supabase = createClient();
+      console.log("Deleting conversation", conversationId);
+
+      const { data, error } = await supabase
+        .from("conversations")
+        .delete()
+        .eq("id", conversationId)
+        .select("id");
+
+      console.log("Delete result", { data, error });
+
+      if (error) {
+        console.error("Error deleting conversation:", error);
+        toast.error("Failed to delete conversation");
+        return;
+      }
+
+      // ❗ If RLS blocked it (non-creator), data will be [].
+      if (!data || data.length === 0) {
+        toast.error("Only the group owner can delete this group");
+        return;
+      }
+
+      // ✅ At least one row was actually deleted
+      setConversations((prev) =>
+        prev.filter((c) => c.id !== conversationId)
+      );
+      if (selectedChat?.id === conversationId) {
+        setSelectedChat(null);
+        setMessages([]);
+      }
+
+      toast.success("Conversation deleted");
+    } catch (error) {
+      console.error("Error deleting conversation:", error);
+      toast.error("Failed to delete conversation");
+    }
+  };
+
+
   return (
     <div className="h-screen bg-cyber-darker overflow-hidden">
+      <InviteMemberDialog
+        open={isInviteDialogOpen}
+        onOpenChange={setIsInviteDialogOpen}
+        conversationId={selectedChat?.id}
+      />
+
+      <CreateGroupDialog
+        open={isCreateGroupOpen}
+        onOpenChange={setIsCreateGroupOpen}
+        onCreateGroup={handleCreateGroup}
+      />
+
       <div className="flex h-full">
         {/* Conversations Sidebar */}
         <div
-          className={`${
-            selectedChat ? "hidden md:block" : "block"
-          } w-full md:w-80 lg:w-96 bg-cyber-card/30 backdrop-blur-xl border-r border-cyber-border`}
+          className={`${selectedChat ? "hidden md:block" : "block"
+            } w-full md:w-80 lg:w-96 bg-cyber-card/30 backdrop-blur-xl border-r border-cyber-border`}
         >
           <div className="h-full flex flex-col">
             <div className="p-4 border-b border-cyber-border space-y-4">
@@ -632,6 +931,14 @@ export default function ChatPage() {
                     {totalUnread}
                   </Badge>
                 )}
+                <Button
+                  size="sm"
+                  className="ml-2 bg-neon-purple/80 text-black"
+                  onClick={() => setIsCreateGroupOpen(true)}
+                >
+                  + Group
+                </Button>
+
               </div>
 
               <div className="relative">
@@ -732,28 +1039,32 @@ export default function ChatPage() {
                   {filteredConversations.map((conv) => (
                     <Card
                       key={conv.id}
-                      className={`cursor-pointer border-0 transition-all ${
-                        selectedChat?.id === conv.id
-                          ? "bg-neon-cyan/20 border-neon-cyan/30"
-                          : "bg-cyber-card/50 hover:bg-cyber-darker/70"
-                      }`}
+                      className={`cursor-pointer border-0 transition-all ${selectedChat?.id === conv.id
+                        ? "bg-neon-cyan/20 border-neon-cyan/30"
+                        : "bg-cyber-card/50 hover:bg-cyber-darker/70"
+                        }`}
                       onClick={() => handleSelectChat(conv)}
                     >
                       <CardContent className="p-3 flex items-center gap-3">
                         <div className="relative">
                           <Avatar>
-                            <AvatarImage
-                              src={conv.otherUser?.profile_picture}
-                            />
+                            {/* For groups you could later add a group icon; for now just initials */}
+                            {!conv.isGroup && (
+                              <AvatarImage src={conv.otherUser?.profile_picture} />
+                            )}
                             <AvatarFallback className="bg-neon-purple/20 text-neon-purple">
-                              {getUserInitials(conv.otherUser?.full_name)}
+                              {conv.isGroup
+                                ? getUserInitials(conv.groupName || "G")
+                                : getUserInitials(conv.otherUser?.full_name)}
                             </AvatarFallback>
                           </Avatar>
                         </div>
                         <div className="flex-1 text-left min-w-0">
                           <div className="flex items-center justify-between mb-1">
                             <h3 className="font-semibold text-foreground truncate">
-                              {conv.otherUser?.full_name || "User"}
+                              {conv.isGroup
+                                ? conv.groupName || "Group"
+                                : conv.otherUser?.full_name || "User"}
                             </h3>
                             {conv.lastMessage && (
                               <span className="text-xs text-muted-foreground">
@@ -763,26 +1074,31 @@ export default function ChatPage() {
                           </div>
                           {conv.lastMessage && (
                             <p
-                              className={`text-sm truncate ${
-                                conv.unreadCount > 0
-                                  ? "text-foreground font-medium"
-                                  : "text-muted-foreground"
-                              }`}
+                              className={`text-sm truncate ${conv.unreadCount > 0
+                                ? "text-foreground font-medium"
+                                : "text-muted-foreground"
+                                }`}
                             >
-                              {conv.lastMessage.sender_id === user.id &&
-                                "You: "}
+                              {!conv.isGroup && conv.lastMessage.sender_id === user.id && "You: "}
+                              {conv.isGroup && conv.lastMessage.sender_id === user.id
+                                ? "You: "
+                                : ""}
                               {conv.lastMessage.content}
+                            </p>
+                          )}
+                          {conv.isGroup && (
+                            <p className="text-[11px] text-muted-foreground truncate">
+                              Group chat
                             </p>
                           )}
                         </div>
                         {conv.unreadCount > 0 && (
-                          <Badge className="bg-neon-cyan text-black">
-                            {conv.unreadCount}
-                          </Badge>
+                          <Badge className="bg-neon-cyan text-black">{conv.unreadCount}</Badge>
                         )}
                       </CardContent>
                     </Card>
                   ))}
+
                 </div>
               )}
             </ScrollArea>
@@ -791,9 +1107,8 @@ export default function ChatPage() {
 
         {/* Chat Area */}
         <div
-          className={`${
-            selectedChat ? "flex" : "hidden md:flex"
-          } flex-1 flex-col`}
+          className={`${selectedChat ? "flex" : "hidden md:flex"
+            } flex-1 flex-col`}
         >
           {selectedChat ? (
             <>
@@ -809,38 +1124,78 @@ export default function ChatPage() {
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
                   <div
-                    className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
-                    onClick={() =>
-                      router.push(`/profile/${selectedChat.otherUser.id}`)
-                    }
+                    className={`flex items-center gap-3 ${selectedChat.isGroup
+                      ? "cursor-default"
+                      : "cursor-pointer hover:opacity-80 transition-opacity"
+                      }`}
+                    onClick={() => {
+                      if (!selectedChat.isGroup && selectedChat.otherUser?.id) {
+                        router.push(`/profile/${selectedChat.otherUser.id}`);
+                      }
+                    }}
                   >
                     <Avatar>
-                      <AvatarImage
-                        src={selectedChat.otherUser?.profile_picture}
-                      />
+                      {!selectedChat.isGroup && (
+                        <AvatarImage src={selectedChat.otherUser?.profile_picture} />
+                      )}
                       <AvatarFallback className="bg-neon-purple/20 text-neon-purple">
-                        {getUserInitials(selectedChat.otherUser?.full_name)}
+                        {selectedChat.isGroup
+                          ? getUserInitials(selectedChat.groupName || "G")
+                          : getUserInitials(selectedChat.otherUser?.full_name)}
                       </AvatarFallback>
                     </Avatar>
                     <div>
                       <h3 className="font-semibold text-foreground">
-                        {selectedChat.otherUser?.full_name || "User"}
+                        {selectedChat.isGroup
+                          ? selectedChat.groupName || "Group"
+                          : selectedChat.otherUser?.full_name || "User"}
                       </h3>
                       <p className="text-sm text-muted-foreground">
-                        Click to view profile
+                        {selectedChat.isGroup
+                          ? "Group chat"
+                          : "Click to view profile"}
                       </p>
                     </div>
                   </div>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button size="icon" variant="ghost">
-                          <MoreVertical className="w-4 h-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>More options</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
+
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button size="icon" variant="ghost">
+                        <MoreVertical className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="bg-cyber-card border-cyber-border">
+                      {selectedChat?.isGroup ? (
+                        <>
+                          <DropdownMenuItem
+                            onClick={() => setIsInviteDialogOpen(true)}
+                          >
+                            Invite member
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={handleCopyGroupLink}>
+                            Invite by link
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => leaveConversation(selectedChat.id)}
+                          >
+                            Exit group
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-red-500"
+                            onClick={() => deleteConversation(selectedChat.id)}
+                          >
+                            Delete group
+                          </DropdownMenuItem>
+                        </>
+                      ) : (
+                        <DropdownMenuItem disabled>
+                          No actions for DMs
+                        </DropdownMenuItem>
+                      )}
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
                 </CardHeader>
               </Card>
               <Separator />
@@ -869,7 +1224,7 @@ export default function ChatPage() {
                         new Date(
                           messages[index - 1].created_at
                         ).toDateString() !==
-                          new Date(msg.created_at).toDateString();
+                        new Date(msg.created_at).toDateString();
 
                       return (
                         <div key={msg.id}>
@@ -881,16 +1236,14 @@ export default function ChatPage() {
                             </div>
                           )}
                           <div
-                            className={`flex ${
-                              isOwn ? "justify-end" : "justify-start"
-                            }`}
+                            className={`flex ${isOwn ? "justify-end" : "justify-start"
+                              }`}
                           >
                             <div
-                              className={`max-w-[85%] md:max-w-md px-4 py-2 rounded-2xl ${
-                                isOwn
-                                  ? "bg-gradient-to-r from-neon-purple to-neon-cyan text-black rounded-br-sm"
-                                  : "bg-cyber-card border border-cyber-border text-foreground rounded-bl-sm"
-                              }`}
+                              className={`max-w-[85%] md:max-w-md px-4 py-2 rounded-2xl ${isOwn
+                                ? "bg-gradient-to-r from-neon-purple to-neon-cyan text-black rounded-br-sm"
+                                : "bg-cyber-card border border-cyber-border text-foreground rounded-bl-sm"
+                                }`}
                             >
                               <p className="whitespace-pre-wrap break-words">
                                 {msg.content}
