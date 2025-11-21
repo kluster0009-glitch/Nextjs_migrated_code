@@ -1,8 +1,25 @@
+# KLUSTER - Campus Communication Platform
+# https://kluster.app
+
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /signup
+Allow: /cookies
+Allow: /privacy
+Allow: /terms
+Disallow: /api/
+Disallow: /auth/
+Disallow: /_next/
+
+# Specific bots
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 0
 
 User-agent: Bingbot
 Allow: /
+Crawl-delay: 0
 
 User-agent: Twitterbot
 Allow: /
@@ -10,5 +27,5 @@ Allow: /
 User-agent: facebookexternalhit
 Allow: /
 
-User-agent: *
-Allow: /
+# Sitemap location
+Sitemap: https://kluster.app/sitemap.xml

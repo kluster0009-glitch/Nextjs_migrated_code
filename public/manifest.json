@@ -1,0 +1,48 @@
+{
+  "name": "KLUSTER - Campus Communication Platform",
+  "short_name": "KLUSTER",
+  "description": "Transform your campus into a connected community with KLUSTER - the all-in-one platform for students",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#8B5CF6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/logo.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "social", "productivity"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Cluster Feed",
+      "short_name": "Cluster",
+      "description": "View campus social feed",
+      "url": "/cluster",
+      "icons": [{ "src": "/favicon.ico", "sizes": "96x96" }]
+    },
+    {
+      "name": "Chat",
+      "short_name": "Chat",
+      "description": "Access real-time messaging",
+      "url": "/chat",
+      "icons": [{ "src": "/favicon.ico", "sizes": "96x96" }]
+    },
+    {
+      "name": "Events",
+      "short_name": "Events",
+      "description": "Browse campus events",
+      "url": "/events",
+      "icons": [{ "src": "/favicon.ico", "sizes": "96x96" }]
+    }
+  ]
+}
