@@ -41,6 +41,16 @@
 
     --radius: 0.75rem;
 
+    /* Sidebar colors */
+    --sidebar-background: 220 35% 10%;
+    --sidebar-foreground: 210 30% 95%;
+    --sidebar-primary: 185 70% 55%;
+    --sidebar-primary-foreground: 220 40% 8%;
+    --sidebar-accent: 220 30% 18%;
+    --sidebar-accent-foreground: 210 30% 95%;
+    --sidebar-border: 220 25% 16%;
+    --sidebar-ring: 185 70% 55%;
+
     /* Kluster custom colors */
     --soft-cyan: 185 70% 55%;
     --soft-violet: 260 60% 65%;
@@ -50,6 +60,15 @@
     --darker-navy: 220 45% 6%;
     --card-bg: 220 35% 12%;
     --border-subtle: 220 25% 18%;
+
+    /* Cyber theme colors */
+    --cyber-dark: 220 45% 6%;
+    --cyber-darker: 220 50% 4%;
+    --cyber-card: 220 35% 12%;
+    --cyber-border: 220 25% 18%;
+    --neon-cyan: 185 70% 55%;
+    --neon-purple: 260 60% 65%;
+    --neon-pink: 330 70% 60%;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--soft-cyan)) 0%, hsl(var(--soft-violet)) 100%);
@@ -100,6 +119,16 @@
     --input: 215 25% 88%;
     --ring: 185 80% 45%;
 
+    /* Sidebar colors for light mode */
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 220 40% 12%;
+    --sidebar-primary: 185 80% 45%;
+    --sidebar-primary-foreground: 210 30% 97%;
+    --sidebar-accent: 210 30% 94%;
+    --sidebar-accent-foreground: 220 40% 12%;
+    --sidebar-border: 215 25% 88%;
+    --sidebar-ring: 185 80% 45%;
+
     /* Light mode custom colors */
     --soft-cyan: 185 80% 45%;
     --soft-violet: 260 70% 55%;
@@ -109,6 +138,15 @@
     --darker-navy: 0 0% 100%;
     --card-bg: 0 0% 100%;
     --border-subtle: 215 25% 85%;
+
+    /* Cyber theme colors for light mode */
+    --cyber-dark: 210 30% 97%;
+    --cyber-darker: 0 0% 100%;
+    --cyber-card: 0 0% 100%;
+    --cyber-border: 215 25% 85%;
+    --neon-cyan: 185 80% 45%;
+    --neon-purple: 260 70% 55%;
+    --neon-pink: 330 70% 60%;
 
     /* Light mode scrollbar */
     ::-webkit-scrollbar-track {
@@ -126,11 +164,12 @@
 
   /* Apply dark theme by default */
   * {
-    @apply border-border;
+    border-color: hsl(var(--border));
   }
 
   body {
-    @apply bg-background text-foreground;
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
     background: hsl(var(--dark-bg));
     font-family: 'Inter', system-ui, -apple-system, sans-serif;
   }
@@ -167,28 +206,49 @@
   /* Immersive background */
   .immersive-bg {
     background: radial-gradient(circle at 20% 20%, hsl(var(--soft-cyan) / 0.08) 0%, transparent 40%),
-                radial-gradient(circle at 80% 80%, hsl(var(--soft-violet) / 0.08) 0%, transparent 40%),
-                hsl(var(--dark-navy));
+      radial-gradient(circle at 80% 80%, hsl(var(--soft-violet) / 0.08) 0%, transparent 40%),
+      hsl(var(--dark-navy));
   }
 
   /* Floating particles effect */
   @keyframes float {
-    0%, 100% { transform: translateY(0px) translateX(0px); }
-    33% { transform: translateY(-20px) translateX(10px); }
-    66% { transform: translateY(-10px) translateX(-10px); }
+
+    0%,
+    100% {
+      transform: translateY(0px) translateX(0px);
+    }
+
+    33% {
+      transform: translateY(-20px) translateX(10px);
+    }
+
+    66% {
+      transform: translateY(-10px) translateX(-10px);
+    }
   }
 
   .float-particle {
     animation: float 8s ease-in-out infinite;
   }
-}
 
-@layer base {
-  * {
-    @apply border-border;
+  /* Cyber theme utilities */
+  .cyber-bg {
+    background: radial-gradient(circle at 20% 20%, hsl(var(--soft-cyan) / 0.05) 0%, transparent 50%),
+      radial-gradient(circle at 80% 80%, hsl(var(--soft-violet) / 0.05) 0%, transparent 50%),
+      hsl(var(--cyber-dark));
   }
 
-  body {
-    @apply bg-background text-foreground;
+  .glow-border {
+    box-shadow: 0 0 20px hsl(var(--soft-cyan) / 0.1);
+  }
+
+  /* Hide scrollbar utility */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }

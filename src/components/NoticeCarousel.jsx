@@ -1,25 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { Card } from '@/components/ui/card';
+import React, { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
 import {
   Carousel,
   CarouselContent,
   CarouselItem,
   CarouselNext,
   CarouselPrevious,
-} from '@/components/ui/carousel';
-import { createClient } from '@/lib/supabase/client';
+} from "@/components/ui/carousel";
+import { createClient } from "@/lib/supabase/client";
 
 // Function to load Google Fonts dynamically
 const loadGoogleFont = (fontFamily) => {
-  if (!fontFamily || fontFamily === 'Inter') return; // Inter is already loaded
-  
-  const fontId = `font-${fontFamily.replace(/\s+/g, '-')}`;
+  if (!fontFamily || fontFamily === "Inter") return; // Inter is already loaded
+
+  const fontId = `font-${fontFamily.replace(/\s+/g, "-")}`;
   if (document.getElementById(fontId)) return; // Already loaded
-  
-  const link = document.createElement('link');
+
+  const link = document.createElement("link");
   link.id = fontId;
-  link.rel = 'stylesheet';
-  link.href = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(/\s+/g, '+')}:wght@400;700&display=swap`;
+  link.rel = "stylesheet";
+  link.href = `https://fonts.googleapis.com/css2?family=${fontFamily.replace(
+    /\s+/g,
+    "+"
+  )}:wght@400;700&display=swap`;
   document.head.appendChild(link);
 };
 
@@ -34,26 +37,28 @@ const NoticeCarousel = () => {
       try {
         const supabase = createClient();
         const { data, error } = await supabase
-          .from('carousel_slides')
-          .select('*')
-          .eq('is_active', true)
-          .order('display_order', { ascending: true })
-          .order('created_at', { ascending: false });
+          .from("carousel_slides")
+          .select("*")
+          .eq("is_active", true)
+          .order("display_order", { ascending: true })
+          .order("created_at", { ascending: false });
 
         if (error) throw error;
-        
+
         if (data && data.length > 0) {
           const typedNotices = data;
           setNotices(typedNotices);
-          
+
           // Load Google Fonts for all notices
-          typedNotices.forEach(notice => {
-            if (notice.heading_font_family) loadGoogleFont(notice.heading_font_family);
-            if (notice.message_font_family) loadGoogleFont(notice.message_font_family);
+          typedNotices.forEach((notice) => {
+            if (notice.heading_font_family)
+              loadGoogleFont(notice.heading_font_family);
+            if (notice.message_font_family)
+              loadGoogleFont(notice.message_font_family);
           });
         }
       } catch (error) {
-        console.error('Error fetching carousel slides:', error);
+        console.error("Error fetching carousel slides:", error);
       } finally {
         setLoading(false);
       }
@@ -83,7 +88,7 @@ const NoticeCarousel = () => {
       <Carousel
         setApi={setApi}
         opts={{
-          align: 'start',
+          align: "start",
           loop: true,
         }}
         className="w-full"
@@ -91,44 +96,47 @@ const NoticeCarousel = () => {
         <CarouselContent>
           {notices.map((notice) => {
             const hasContent = notice.image_url || notice.heading;
-            
+
             // Don't render if no image or heading
             if (!hasContent) return null;
-            
+
             const headingStyle = {
-              color: notice.heading_color || '#ffffff',
-              fontFamily: notice.heading_font_family || 'Inter',
-              fontSize: notice.heading_font_size || '2xl',
+              color: notice.heading_color || "#ffffff",
+              fontFamily: notice.heading_font_family || "Inter",
+              fontSize: notice.heading_font_size || "2xl",
             };
-            
+
             const messageStyle = {
-              color: notice.message_color || '#ffffff',
-              fontFamily: notice.message_font_family || 'Inter',
-              fontSize: notice.message_font_size || 'base',
+              color: notice.message_color || "#ffffff",
+              fontFamily: notice.message_font_family || "Inter",
+              fontSize: notice.message_font_size || "base",
             };
-            
+
             const CardContent = (
               <Card className="relative overflow-hidden border-cyber-border bg-cyber-card/50 backdrop-blur-xl">
-                {/* 16:9 Aspect Ratio Container */}
-                <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                {/* Reduced Height Container - Half of 16:9 */}
+                <div
+                  className="relative w-full"
+                  style={{ paddingBottom: "28.125%" }}
+                >
                   {/* Background Image */}
                   {notice.image_url && (
-                    <div 
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{ 
-                        backgroundImage: `url(${notice.image_url})`,
-                      }}
-                    >
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent" />
-                    </div>
+                    <img
+                      src={notice.image_url}
+                      alt={notice.heading || "Carousel image"}
+                      className="absolute inset-0 w-full h-full object-cover"
+                    />
                   )}
-                  
+                  {notice.image_url && (
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/40 to-transparent pointer-events-none" />
+                  )}
+
                   {/* Content Overlay */}
                   <div className="absolute inset-0 p-6 flex flex-col justify-end">
                     <div className="space-y-3">
                       {/* Heading */}
                       {notice.heading && (
-                        <h3 
+                        <h3
                           className="text-2xl md:text-3xl font-bold"
                           style={{
                             color: headingStyle.color,
@@ -138,9 +146,9 @@ const NoticeCarousel = () => {
                           {notice.heading}
                         </h3>
                       )}
-                      
+
                       {/* Message */}
-                      <p 
+                      <p
                         className="leading-relaxed"
                         style={{
                           color: messageStyle.color,
@@ -154,12 +162,12 @@ const NoticeCarousel = () => {
                 </div>
               </Card>
             );
-            
+
             return (
               <CarouselItem key={notice.id}>
                 {notice.button_link ? (
-                  <div 
-                    onClick={() => window.open(notice.button_link, '_blank')}
+                  <div
+                    onClick={() => window.open(notice.button_link, "_blank")}
                     className="cursor-pointer"
                   >
                     {CardContent}

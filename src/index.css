@@ -41,6 +41,16 @@
 
     --radius: 0.75rem;
 
+    /* Sidebar colors */
+    --sidebar-background: 220 35% 10%;
+    --sidebar-foreground: 210 30% 95%;
+    --sidebar-primary: 185 70% 55%;
+    --sidebar-primary-foreground: 220 40% 8%;
+    --sidebar-accent: 220 30% 18%;
+    --sidebar-accent-foreground: 210 30% 95%;
+    --sidebar-border: 220 25% 16%;
+    --sidebar-ring: 185 70% 55%;
+
     /* Kluster custom colors */
     --soft-cyan: 185 70% 55%;
     --soft-violet: 260 60% 65%;
@@ -50,6 +60,15 @@
     --darker-navy: 220 45% 6%;
     --card-bg: 220 35% 12%;
     --border-subtle: 220 25% 18%;
+
+    /* Cyber theme colors */
+    --cyber-dark: 220 45% 6%;
+    --cyber-darker: 220 50% 4%;
+    --cyber-card: 220 35% 12%;
+    --cyber-border: 220 25% 18%;
+    --neon-cyan: 185 70% 55%;
+    --neon-purple: 260 60% 65%;
+    --neon-pink: 330 70% 60%;
 
     /* Gradients */
     --gradient-primary: linear-gradient(135deg, hsl(var(--soft-cyan)) 0%, hsl(var(--soft-violet)) 100%);
@@ -180,15 +199,5 @@
 
   .float-particle {
     animation: float 8s ease-in-out infinite;
-  }
-}
-
-@layer base {
-  * {
-    @apply border-border;
-  }
-
-  body {
-    @apply bg-background text-foreground;
   }
 }

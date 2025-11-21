@@ -1,4 +1,3 @@
-import { nextui } from "@nextui-org/react"
 import tailwindcssAnimate from "tailwindcss-animate"
 import typography from "@tailwindcss/typography"
 
@@ -9,7 +8,6 @@ export default {
     "./src/pages/**/*.{js,jsx}",
     "./src/components/**/*.{js,jsx}",
     "./src/app/**/*.{js,jsx}",
-    "./node_modules/@nextui-org/theme/dist/**/*.{js,ts,jsx,tsx}",
   ],
   prefix: "",
   theme: {
@@ -58,6 +56,16 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
+        },
         'soft-cyan': "hsl(var(--soft-cyan))",
         'soft-violet': "hsl(var(--soft-violet))",
         'soft-blue': "hsl(var(--soft-blue))",
@@ -66,6 +74,13 @@ export default {
         'darker-navy': "hsl(var(--darker-navy))",
         'card-bg': "hsl(var(--card-bg))",
         'border-subtle': "hsl(var(--border-subtle))",
+        'cyber-dark': "hsl(var(--cyber-dark))",
+        'cyber-darker': "hsl(var(--cyber-darker))",
+        'cyber-card': "hsl(var(--cyber-card))",
+        'cyber-border': "hsl(var(--cyber-border))",
+        'neon-cyan': "hsl(var(--neon-cyan))",
+        'neon-purple': "hsl(var(--neon-purple))",
+        'neon-pink': "hsl(var(--neon-pink))",
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -104,6 +119,5 @@ export default {
   plugins: [
     tailwindcssAnimate,
     typography,
-    nextui(),
   ],
 }

@@ -1,364 +1,289 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { createClient } from '@/lib/supabase/client';
-import { toast } from '@/components/ui/sonner';
+"use client";
+
+import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/contexts/ProfileContext";
+import { createClient } from "@/lib/supabase/client";
+import { toast } from "@/components/ui/sonner";
 import {
   Dialog,
   DialogContent,
+  DialogTrigger,
   DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogOverlay,
-  DialogPortal,
-} from '@/components/ui/dialog';
-import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Image as ImageIcon, X, Smile, MapPin, BarChart3, Calendar } from 'lucide-react';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { ImageIcon, X, Globe, Lock } from "lucide-react";
 
-const categories = [
-  'General',
-  'Academic',
-  'College',
-  'Events',
-  'Opportunities',
-  'Campus Life',
-  'Study Groups',
-  'Announcements',
-];
-
-export function CreatePostModal({ open, onOpenChange, onPostCreated }) {
+export function CreatePostModal({
+  trigger,
+  open,
+  onOpenChange,
+  onPostCreated,
+}) {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(false);
-  const [content, setContent] = useState('');
-  const [images, setImages] = useState([]);
-  const [isDragging, setIsDragging] = useState(false);
-  const fileInputRef = useRef(null);
-  const textareaRef = useRef(null);
+  const { profile, getAvatarUrl } = useProfile();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [content, setContent] = useState("");
+  const [imageUrl, setImageUrl] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("General");
+  const [showImageInput, setShowImageInput] = useState(false);
 
-  const getUserInitials = () => {
-    const name = user?.profile?.full_name || user?.email || '';
-    if (!name) return 'U';
+  const categories = [
+    { value: "General", emoji: "💬" },
+    { value: "Question", emoji: "❓" },
+    { value: "Discussion", emoji: "💡" },
+    { value: "Announcement", emoji: "📢" },
+    { value: "Event", emoji: "📅" },
+    { value: "Study Group", emoji: "📚" },
+    { value: "Project", emoji: "🚀" },
+    { value: "Other", emoji: "✨" },
+  ];
+
+  const getUserInitials = (name) => {
+    if (!name) return "U";
     return name
-      .split(' ')
-      .map(n => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2);
-  };
-
-  const handleDragOver = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-  }, []);
-
-  const handleDragLeave = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-  }, []);
-
-  const handleDrop = useCallback((e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(false);
-
-    const files = Array.from(e.dataTransfer.files);
-    const imageFiles = files.filter(file => file.type.startsWith('image/'));
-
-    if (imageFiles.length > 0) {
-      handleFiles(imageFiles);
-    }
-  }, []);
-
-  const handleFiles = (files) => {
-    const newImages = files.slice(0, 4 - images.length).map(file => ({
-      file,
-      preview: URL.createObjectURL(file),
-      id: Math.random().toString(36).substr(2, 9)
-    }));
-
-    setImages(prev => [...prev, ...newImages]);
-  };
-
-  const handleFileSelect = (e) => {
-    const files = Array.from(e.target.files);
-    handleFiles(files);
-  };
-
-  const removeImage = (id) => {
-    setImages(prev => {
-      const image = prev.find(img => img.id === id);
-      if (image) {
-        URL.revokeObjectURL(image.preview);
-      }
-      return prev.filter(img => img.id !== id);
-    });
+      .split(" ")
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase();
   };
 
   const handleSubmit = async (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
+    e.preventDefault();
 
     if (!content.trim()) {
-      toast.error('Please write something');
+      toast.error("Please write something to post");
       return;
     }
 
-    if (!user) {
-      toast.error('You must be logged in to create a post');
-      return;
-    }
-
-    setLoading(true);
+    setIsSubmitting(true);
 
     try {
-      // Create post without images first (skip image upload)
       const supabase = createClient();
+
+      // Generate a simple title from content (first 50 chars or first line)
+      const autoTitle =
+        content.split("\n")[0].slice(0, 50) +
+        (content.length > 50 ? "..." : "");
+
       const { data, error } = await supabase
-        .from('posts')
+        .from("posts")
         .insert([
           {
-            user_id: user.id,
-            title: content.trim().substring(0, 100),
+            title: autoTitle,
             content: content.trim(),
-            category: 'General',
-            image_url: null,
-          }
+            category: selectedCategory,
+            image_url: imageUrl || null,
+            user_id: user.id,
+          },
         ])
-        .select()
-        .single();
+        .select();
 
       if (error) throw error;
 
-      // Cleanup
-      images.forEach(img => URL.revokeObjectURL(img.preview));
-      setContent('');
-      setImages([]);
-      
-      toast.success('Post created successfully! 🎉');
-      
-      if (onPostCreated) {
-        onPostCreated(data);
-      }
-      onOpenChange(false);
-    } catch (error) {
-      console.error('Error creating post:', error);
-      toast.error(`Failed to create post: ${error.message}`);
-    } finally {
-      setLoading(false);
-    }
-  };
+      toast.success("Posted successfully!");
 
-  const handleClose = () => {
-    if (!loading) {
-      images.forEach(img => URL.revokeObjectURL(img.preview));
-      setImages([]);
-      setContent('');
-      onOpenChange(false);
+      // Reset form
+      setContent("");
+      setImageUrl("");
+      setSelectedCategory("General");
+      setShowImageInput(false);
+
+      if (onOpenChange) {
+        onOpenChange(false);
+      }
+
+      // Notify parent component
+      if (onPostCreated && data[0]) {
+        onPostCreated(data[0]);
+      }
+    } catch (error) {
+      console.error("Error creating post:", error);
+      toast.error("Failed to create post. Please try again.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogPortal>
-        {/* Custom Overlay */}
-        <DialogPrimitive.Overlay 
-          className="fixed inset-0 z-50 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0"
-        />
-        
-        {/* Custom Content */}
-        <DialogPrimitive.Content
-          className={cn(
-            "fixed left-[50%] top-[50%] z-50 w-full max-w-[600px] translate-x-[-50%] translate-y-[-50%] bg-black shadow-2xl duration-200 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[state=closed]:slide-out-to-left-1/2 data-[state=closed]:slide-out-to-top-[48%] data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-2xl overflow-hidden"
-          )}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
-        >
-          {/* Drag overlay */}
-          {isDragging && (
-            <div className="absolute inset-0 z-50 bg-[#1d9bf0]/10 border-4 border-dashed border-[#1d9bf0] rounded-2xl flex items-center justify-center">
-              <div className="text-center">
-                <ImageIcon className="w-16 h-16 mx-auto mb-4 text-[#1d9bf0]" />
-                <p className="text-xl font-semibold text-[#1d9bf0]">Drop your images here</p>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
+      <DialogContent className="sm:max-w-[600px] p-0 gap-0 bg-cyber-card border-cyber-border">
+        <DialogDescription className="sr-only">
+          Create a new post to share with the community
+        </DialogDescription>
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-cyber-border">
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => onOpenChange && onOpenChange(false)}
+              className="h-8 w-8"
+            >
+              <X className="w-5 h-5" />
+            </Button>
+            <h2 className="text-lg font-semibold">Create Post</h2>
+          </div>
+        </div>
+
+        <form onSubmit={handleSubmit} className="flex flex-col">
+          {/* Main Content Area */}
+          <div className="px-4 py-3">
+            {/* User Info */}
+            <div className="flex gap-3 mb-3">
+              <Avatar className="w-10 h-10">
+                <AvatarImage src={getAvatarUrl()} />
+                <AvatarFallback className="bg-neon-purple/20 text-neon-purple">
+                  {getUserInitials(profile?.full_name || user?.email)}
+                </AvatarFallback>
+              </Avatar>
+              <div className="flex-1">
+                <p className="font-semibold text-sm">
+                  {profile?.full_name ||
+                    user?.email?.split("@")[0] ||
+                    "Anonymous"}
+                </p>
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <Globe className="w-3 h-3" />
+                  <span>Public</span>
+                </div>
               </div>
             </div>
-          )}
 
-          {/* Header */}
+            {/* Textarea */}
+            <Textarea
+              placeholder="What's happening?"
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              className="min-h-[120px] text-lg border-0 focus-visible:ring-0 focus-visible:ring-offset-0 resize-none bg-transparent p-0 placeholder:text-muted-foreground/50"
+              disabled={isSubmitting}
+              autoFocus
+            />
+
+            {/* Image Preview */}
+            {imageUrl && (
+              <div className="mt-3 relative rounded-2xl overflow-hidden border border-cyber-border">
+                <img
+                  src={imageUrl}
+                  alt="Preview"
+                  className="w-full max-h-96 object-cover"
+                  onError={(e) => {
+                    e.target.style.display = "none";
+                    toast.error("Failed to load image");
+                  }}
+                />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  size="icon"
+                  onClick={() => {
+                    setImageUrl("");
+                    setShowImageInput(false);
+                  }}
+                  className="absolute top-2 right-2 h-8 w-8 rounded-full bg-cyber-darker/80 hover:bg-cyber-darker"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            )}
+
+            {/* Image URL Input (when button clicked) */}
+            {showImageInput && !imageUrl && (
+              <div className="mt-3 p-3 rounded-lg border border-cyber-border bg-cyber-darker/50">
+                <input
+                  type="url"
+                  placeholder="Paste image URL..."
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  className="w-full bg-transparent text-sm outline-none"
+                  autoFocus
+                />
+                <div className="flex gap-2 mt-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setShowImageInput(false)}
+                    className="text-xs"
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* Category Pills */}
+            <div className="mt-4">
+              <p className="text-xs text-muted-foreground mb-2">Category</p>
+              <div className="flex flex-wrap gap-2">
+                {categories.map((cat) => (
+                  <Badge
+                    key={cat.value}
+                    variant={
+                      selectedCategory === cat.value ? "default" : "outline"
+                    }
+                    className={`cursor-pointer transition-all ${
+                      selectedCategory === cat.value
+                        ? "bg-neon-cyan/20 text-neon-cyan border-neon-cyan/30"
+                        : "border-cyber-border hover:bg-cyber-darker"
+                    }`}
+                    onClick={() => setSelectedCategory(cat.value)}
+                  >
+                    <span className="mr-1">{cat.emoji}</span>
+                    {cat.value}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div className="border-t border-cyber-border" />
+
+          {/* Footer Actions */}
           <div className="flex items-center justify-between px-4 py-3">
-            <DialogPrimitive.Close className="rounded-full p-2 hover:bg-white/10 transition-colors">
-              <X className="h-5 w-5 text-white" />
-              <span className="sr-only">Close</span>
-            </DialogPrimitive.Close>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1">
               <Button
                 type="button"
                 variant="ghost"
-                className="text-[#1d9bf0] hover:bg-[#1d9bf0]/10 font-bold rounded-full px-4 h-9"
-                disabled
+                size="icon"
+                onClick={() => setShowImageInput(!showImageInput)}
+                className="h-9 w-9 text-neon-cyan hover:bg-neon-cyan/10"
+                disabled={isSubmitting}
               >
-                Drafts
+                <ImageIcon className="w-5 h-5" />
               </Button>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {content.trim() && (
+                <span className="text-xs text-muted-foreground">
+                  {content.length} characters
+                </span>
+              )}
               <Button
-                onClick={handleSubmit}
-                disabled={loading || !content.trim()}
-                className="bg-[#1d9bf0] hover:bg-[#1a8cd8] text-white font-bold rounded-full px-6 h-9 disabled:opacity-50 disabled:cursor-not-allowed"
+                type="submit"
+                disabled={!content.trim() || isSubmitting}
+                className="bg-gradient-to-r from-neon-cyan to-neon-purple text-black font-semibold px-6 disabled:opacity-50"
               >
-                {loading ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                {isSubmitting ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black mr-2" />
+                    Posting...
+                  </>
                 ) : (
-                  'Post'
+                  "Post"
                 )}
               </Button>
             </div>
           </div>
-
-          {/* Main Content */}
-          <form onSubmit={handleSubmit} className="px-4 pb-4">
-            <div className="flex gap-3">
-              {/* Avatar */}
-              <Avatar className="w-10 h-10 flex-shrink-0">
-                <AvatarImage src={user?.profile?.profile_picture} />
-                <AvatarFallback className="bg-gray-700 text-white">
-                  {getUserInitials()}
-                </AvatarFallback>
-              </Avatar>
-
-              {/* Content Area */}
-              <div className="flex-1 min-w-0">
-                {/* Textarea */}
-                <Textarea
-                  ref={textareaRef}
-                  placeholder="What's happening?"
-                  value={content}
-                  onChange={(e) => setContent(e.target.value)}
-                  disabled={loading}
-                  className="min-h-[120px] text-xl border-0 bg-transparent p-0 resize-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-gray-500 text-white"
-                  autoFocus
-                />
-
-                {/* Image Previews */}
-                {images.length > 0 && (
-                  <div className={cn(
-                    "mt-3 rounded-2xl overflow-hidden border border-gray-700",
-                    images.length === 1 && "grid grid-cols-1",
-                    images.length === 2 && "grid grid-cols-2 gap-0.5",
-                    images.length === 3 && "grid grid-cols-2 gap-0.5",
-                    images.length === 4 && "grid grid-cols-2 gap-0.5"
-                  )}>
-                    {images.map((image, index) => (
-                      <div 
-                        key={image.id} 
-                        className={cn(
-                          "relative group bg-gray-900",
-                          images.length === 3 && index === 0 && "col-span-2"
-                        )}
-                      >
-                        <img
-                          src={image.preview}
-                          alt={`Upload ${index + 1}`}
-                          className="w-full h-full object-cover aspect-video"
-                        />
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          className="absolute top-2 right-2 h-8 w-8 rounded-full bg-black/75 hover:bg-black/90 text-white"
-                          onClick={() => removeImage(image.id)}
-                          disabled={loading}
-                        >
-                          <X className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Reply visibility */}
-                <div className="flex items-center gap-1 text-[#1d9bf0] text-[15px] font-semibold mt-4 mb-2">
-                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                    <path d="M12 1.75C6.34 1.75 1.75 6.34 1.75 12S6.34 22.25 12 22.25 22.25 17.66 22.25 12 17.66 1.75 12 1.75zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z"/>
-                    <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                  </svg>
-                  <span>Everyone can reply</span>
-                </div>
-
-                {/* Divider */}
-                <div className="h-px bg-gray-700 mb-3" />
-
-                {/* Bottom toolbar */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center -ml-2">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full"
-                      onClick={() => fileInputRef.current?.click()}
-                      disabled={loading || images.length >= 4}
-                    >
-                      <ImageIcon className="w-5 h-5" />
-                    </Button>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={handleFileSelect}
-                      disabled={loading || images.length >= 4}
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full"
-                      disabled
-                    >
-                      <BarChart3 className="w-5 h-5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full"
-                      disabled
-                    >
-                      <Smile className="w-5 h-5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full"
-                      disabled
-                    >
-                      <Calendar className="w-5 h-5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-9 w-9 text-[#1d9bf0] hover:bg-[#1d9bf0]/10 rounded-full"
-                      disabled
-                    >
-                      <MapPin className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </form>
-        </DialogPrimitive.Content>
-      </DialogPortal>
+        </form>
+      </DialogContent>
     </Dialog>
   );
 }
