@@ -17,6 +17,7 @@ import {
   BookOpen,
   GraduationCap,
   Calendar,
+  CalendarDays,
   Trophy,
   Moon,
   Sun,
@@ -24,6 +25,7 @@ import {
   Plus,
   Bell,
   LogOut,
+  Search,
 } from "lucide-react";
 import UnreadMessagesIndicator from "@/components/UnreadMessagesIndicator";
 import {
@@ -40,6 +42,7 @@ import {
 } from "@/components/ui/sidebar";
 import { Button } from "@/components/ui/button";
 import { CreatePostModal } from "@/components/CreatePostModal";
+import { SearchDialog } from "@/components/SearchDialog";
 
 const navItems = [
   { icon: MessageSquare, label: "Cluster", path: "/cluster" },
@@ -48,6 +51,7 @@ const navItems = [
   { icon: HelpCircle, label: "Q&A", path: "/qa" },
   { icon: BookOpen, label: "Library", path: "/library" },
   { icon: GraduationCap, label: "Professor", path: "/professor" },
+  { icon: CalendarDays, label: "Calendar", path: "/calendar" },
   { icon: Calendar, label: "Events", path: "/events" },
   { icon: Trophy, label: "Leaderboard", path: "/leaderboard" },
 ];
@@ -59,6 +63,7 @@ export function AppSidebar() {
   const pathname = usePathname();
   const { open, toggleSidebar } = useSidebar();
   const [isCreatePostOpen, setIsCreatePostOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   const getUserInitials = () => {
     const name = profile?.full_name || user?.email || "";
@@ -94,6 +99,7 @@ export function AppSidebar() {
         onOpenChange={setIsCreatePostOpen}
         onPostCreated={handlePostCreated}
       />
+      <SearchDialog open={isSearchOpen} onOpenChange={setIsSearchOpen} />
       <Sidebar
         collapsible="icon"
         className={`${
@@ -147,6 +153,17 @@ export function AppSidebar() {
                     <Plus className="w-4 h-4" />
                     {open && <span className="ml-2">Create Post</span>}
                   </Button>
+                </SidebarMenuItem>
+
+                {/* Search Button */}
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    onClick={() => setIsSearchOpen(true)}
+                    className="text-muted-foreground hover:text-foreground hover:bg-muted/50 transition-all duration-200"
+                  >
+                    <Search className="w-5 h-5" />
+                    {open && <span>Search</span>}
+                  </SidebarMenuButton>
                 </SidebarMenuItem>
 
                 {navItems.map((item) => (

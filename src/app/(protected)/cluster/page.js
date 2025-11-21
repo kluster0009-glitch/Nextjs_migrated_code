@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import NoticeCarousel from "@/components/NoticeCarousel";
 import { CommentsDialog } from "@/components/CommentsDialog";
+import { MediaCarousel } from "@/components/MediaCarousel";
 import { formatDistanceToNow } from "date-fns";
 
 export default function ClusterPage() {
@@ -69,6 +70,12 @@ export default function ClusterPage() {
             profilesData?.find((profile) => profile.id === post.user_id) ||
             null,
         }));
+
+        console.log("📊 Fetched posts with media:", postsWithProfiles.map(p => ({ 
+          id: p.id, 
+          media: p.media, 
+          image_url: p.image_url 
+        })));
 
         setPosts(postsWithProfiles);
 
@@ -463,26 +470,29 @@ export default function ClusterPage() {
 
   const stats = {
     totalPosts: posts.length,
-    activeUsers: 1234,
-    thisWeek: `+${
-      posts.filter((p) => {
-        const postDate = new Date(p.created_at);
-        const weekAgo = new Date();
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        return postDate >= weekAgo;
-      }).length
-    } posts`,
+    todayPosts: posts.filter((p) => {
+      const postDate = new Date(p.created_at);
+      const today = new Date();
+      return (
+        postDate.getDate() === today.getDate() &&
+        postDate.getMonth() === today.getMonth() &&
+        postDate.getFullYear() === today.getFullYear()
+      );
+    }).length,
   };
 
   return (
     <div className="min-h-screen bg-cyber-darker">
       {/* Main Content */}
       <div className="w-full py-6 px-6">
+        {/* Carousel Banner - Full Width */}
+        <div>
+          <NoticeCarousel />
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* Main Feed */}
           <div className="lg:col-span-9">
-            {/* Carousel Banner */}
-            <NoticeCarousel />
 
             {/* New Post Notification - X-style */}
             {showNewPostNotification && (
@@ -592,7 +602,7 @@ export default function ClusterPage() {
                 posts.map((post) => {
                   // Get author info from the joined profiles table
                   const authorName =
-                    post.profiles?.full_name || "Anonymous User";
+                    post.profiles?.username || post.profiles?.full_name || "Anonymous User";
                   const authorAvatar = post.profiles?.profile_picture;
                   const authorUsername = post.profiles?.username;
 
@@ -654,7 +664,11 @@ export default function ClusterPage() {
                           <p className="text-muted-foreground mb-4 whitespace-pre-wrap">
                             {post.content}
                           </p>
-                          {post.image_url && (
+                          
+                          {/* Media Display - Support both new media array and legacy image_url */}
+                          {post.media && post.media.length > 0 ? (
+                            <MediaCarousel media={post.media} />
+                          ) : post.image_url ? (
                             <div className="rounded-lg overflow-hidden">
                               <img
                                 src={post.image_url}
@@ -662,7 +676,7 @@ export default function ClusterPage() {
                                 className="w-full h-auto object-cover"
                               />
                             </div>
-                          )}
+                          ) : null}
                         </div>
 
                         {/* Post Actions */}
@@ -763,21 +777,15 @@ export default function ClusterPage() {
                 </h3>
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Posts Today</span>
+                    <span className="text-neon-cyan font-semibold">
+                      {stats.todayPosts}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
                     <span className="text-muted-foreground">Total Posts</span>
                     <span className="text-foreground font-semibold">
                       {stats.totalPosts}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Active Users</span>
-                    <span className="text-foreground font-semibold">
-                      {stats.activeUsers.toLocaleString()}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">This Week</span>
-                    <span className="text-neon-cyan font-semibold">
-                      {stats.thisWeek}
                     </span>
                   </div>
                 </div>

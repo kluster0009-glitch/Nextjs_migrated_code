@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { createClient } from "@/lib/supabase/client";
@@ -10,12 +10,14 @@ import {
   DialogContent,
   DialogTrigger,
   DialogDescription,
+  DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { ImageIcon, X, Globe, Lock } from "lucide-react";
+import { MultiMediaUploader } from "@/components/MultiMediaUploader";
 
 export function CreatePostModal({
   trigger,
@@ -27,9 +29,14 @@ export function CreatePostModal({
   const { profile, getAvatarUrl } = useProfile();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [content, setContent] = useState("");
-  const [imageUrl, setImageUrl] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("General");
-  const [showImageInput, setShowImageInput] = useState(false);
+  const [showMediaUploader, setShowMediaUploader] = useState(false);
+  const [mediaFiles, setMediaFiles] = useState([]);
+
+  // Memoize callback to prevent infinite loop in MultiMediaUploader useEffect
+  const handleMediaChange = useCallback((media) => {
+    setMediaFiles(media);
+  }, []);
 
   const categories = [
     { value: "General", emoji: "💬" },
@@ -69,6 +76,8 @@ export function CreatePostModal({
         content.split("\n")[0].slice(0, 50) +
         (content.length > 50 ? "..." : "");
 
+      console.log("📤 Creating post with media:", mediaFiles);
+
       const { data, error } = await supabase
         .from("posts")
         .insert([
@@ -76,7 +85,8 @@ export function CreatePostModal({
             title: autoTitle,
             content: content.trim(),
             category: selectedCategory,
-            image_url: imageUrl || null,
+            media: mediaFiles.length > 0 ? mediaFiles : [],
+            image_url: mediaFiles.length > 0 ? mediaFiles[0].url : null, // Keep for backward compatibility
             user_id: user.id,
           },
         ])
@@ -84,13 +94,15 @@ export function CreatePostModal({
 
       if (error) throw error;
 
+      console.log("✅ Post created:", data);
+
       toast.success("Posted successfully!");
 
       // Reset form
       setContent("");
-      setImageUrl("");
+      setMediaFiles([]);
       setSelectedCategory("General");
-      setShowImageInput(false);
+      setShowMediaUploader(false);
 
       if (onOpenChange) {
         onOpenChange(false);
@@ -112,6 +124,7 @@ export function CreatePostModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       {trigger && <DialogTrigger asChild>{trigger}</DialogTrigger>}
       <DialogContent className="sm:max-w-[600px] p-0 gap-0 bg-cyber-card border-cyber-border">
+        <DialogTitle className="sr-only">Create Post</DialogTitle>
         <DialogDescription className="sr-only">
           Create a new post to share with the community
         </DialogDescription>
@@ -165,55 +178,16 @@ export function CreatePostModal({
               autoFocus
             />
 
-            {/* Image Preview */}
-            {imageUrl && (
-              <div className="mt-3 relative rounded-2xl overflow-hidden border border-cyber-border">
-                <img
-                  src={imageUrl}
-                  alt="Preview"
-                  className="w-full max-h-96 object-cover"
-                  onError={(e) => {
-                    e.target.style.display = "none";
-                    toast.error("Failed to load image");
-                  }}
+            {/* Multi-Media Uploader */}
+            {showMediaUploader && (
+              <div className="mt-3">
+                <MultiMediaUploader
+                  onMediaChange={handleMediaChange}
+                  maxFiles={10}
+                  folder="posts"
+                  acceptImages={true}
+                  acceptVideos={true}
                 />
-                <Button
-                  type="button"
-                  variant="secondary"
-                  size="icon"
-                  onClick={() => {
-                    setImageUrl("");
-                    setShowImageInput(false);
-                  }}
-                  className="absolute top-2 right-2 h-8 w-8 rounded-full bg-cyber-darker/80 hover:bg-cyber-darker"
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            )}
-
-            {/* Image URL Input (when button clicked) */}
-            {showImageInput && !imageUrl && (
-              <div className="mt-3 p-3 rounded-lg border border-cyber-border bg-cyber-darker/50">
-                <input
-                  type="url"
-                  placeholder="Paste image URL..."
-                  value={imageUrl}
-                  onChange={(e) => setImageUrl(e.target.value)}
-                  className="w-full bg-transparent text-sm outline-none"
-                  autoFocus
-                />
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setShowImageInput(false)}
-                    className="text-xs"
-                  >
-                    Cancel
-                  </Button>
-                </div>
               </div>
             )}
 
@@ -252,7 +226,7 @@ export function CreatePostModal({
                 type="button"
                 variant="ghost"
                 size="icon"
-                onClick={() => setShowImageInput(!showImageInput)}
+                onClick={() => setShowMediaUploader(!showMediaUploader)}
                 className="h-9 w-9 text-neon-cyan hover:bg-neon-cyan/10"
                 disabled={isSubmitting}
               >

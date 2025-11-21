@@ -44,6 +44,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { MediaCarousel } from "@/components/MediaCarousel";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -408,13 +409,20 @@ export default function ProfilePage() {
           <p className="text-sm text-muted-foreground line-clamp-2 mb-3">
             {post.content}
           </p>
-          {post.image_url && (
+          
+          {/* Media Display - Support both new media array and legacy image_url */}
+          {post.media && post.media.length > 0 ? (
+            <div className="mb-3">
+              <MediaCarousel media={post.media} />
+            </div>
+          ) : post.image_url ? (
             <img
               src={post.image_url}
               alt=""
               className="w-full h-32 object-cover rounded-lg mb-3"
             />
-          )}
+          ) : null}
+          
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Heart className="w-4 h-4" />
@@ -562,6 +570,9 @@ export default function ProfilePage() {
                   <h1 className="text-2xl md:text-3xl font-bold text-foreground">
                     {profile?.full_name || "User"}
                   </h1>
+                  <p className="text-muted-foreground text-sm mt-1">
+                    @{profile?.username || "username"}
+                  </p>
                   <p className="text-muted-foreground flex items-center gap-2 mt-1">
                     <Mail className="w-4 h-4 flex-shrink-0" />
                     <span className="truncate">{user?.email}</span>
@@ -572,27 +583,6 @@ export default function ProfilePage() {
                       <span className="truncate">{profile.college_name}</span>
                     </p>
                   )}
-                  {/* Follow Stats */}
-                  <div className="flex items-center gap-4 mt-3 flex-wrap">
-                    <div className="text-sm">
-                      <span className="font-bold text-foreground">
-                        {stats.postsCount}
-                      </span>{" "}
-                      <span className="text-muted-foreground">Posts</span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-bold text-foreground">
-                        {stats.followersCount}
-                      </span>{" "}
-                      <span className="text-muted-foreground">Followers</span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="font-bold text-foreground">
-                        {stats.followingCount}
-                      </span>{" "}
-                      <span className="text-muted-foreground">Following</span>
-                    </div>
-                  </div>
                 </div>
               </div>
 

@@ -312,8 +312,18 @@ export default function ChatPage() {
       const validConversations = conversationsWithDetails.filter(
         (c) => c !== null
       );
-      console.log("Loaded conversations:", validConversations);
-      setConversations(validConversations);
+      
+      // Remove duplicates by conversation ID
+      const uniqueConversations = validConversations.reduce((acc, current) => {
+        const exists = acc.find(item => item.id === current.id);
+        if (!exists) {
+          acc.push(current);
+        }
+        return acc;
+      }, []);
+      
+      console.log("Loaded conversations:", uniqueConversations);
+      setConversations(uniqueConversations);
 
       // Trigger global unread badge refresh
       if (typeof window !== "undefined") {
@@ -489,7 +499,18 @@ export default function ChatPage() {
       // Check if conversation already in list
       const existingConv = conversations.find((c) => c.id === conversationId);
       if (!existingConv) {
-        setConversations((prev) => [newChat, ...prev]);
+        setConversations((prev) => {
+          // Double check it's not already there to prevent race conditions
+          if (prev.some(c => c.id === conversationId)) {
+            return prev;
+          }
+          return [newChat, ...prev];
+        });
+      } else {
+        // Update existing conversation
+        setConversations((prev) =>
+          prev.map((c) => (c.id === conversationId ? newChat : c))
+        );
       }
 
       setSelectedChat(newChat);
@@ -718,11 +739,15 @@ export default function ChatPage() {
       return conv.unreadCount > 0;
     }
 
+    if (activeTab === "dm") {
+      return !conv.isGroup; // Show only direct messages (non-group)
+    }
+
     if (activeTab === "groups") {
       return conv.isGroup;
     }
 
-    // "all", "favourites", "community" etc -> show everything for now
+    // "all", "community" etc -> show everything for now
     return true;
   });
 
@@ -730,7 +755,7 @@ export default function ChatPage() {
   const tabs = [
     { id: "all", label: "All" },
     { id: "unread", label: "Unread", count: totalUnread },
-    { id: "favourites", label: "Favourites" },
+    { id: "dm", label: "DM" },
     { id: "groups", label: "Groups", count: 51 },
     { id: "community", label: "Community" },
   ];
@@ -820,7 +845,13 @@ export default function ChatPage() {
         updatedAt: conv.created_at,
       };
 
-      setConversations((prev) => [newChat, ...prev]);
+      setConversations((prev) => {
+        // Prevent duplicate group
+        if (prev.some(c => c.id === conv.id)) {
+          return prev;
+        }
+        return [newChat, ...prev];
+      });
       setSelectedChat(newChat);
       setMessages([]);
 
@@ -1034,10 +1065,10 @@ export default function ChatPage() {
                       )}
                     </TabsTrigger>
                     <TabsTrigger
-                      value="favourites"
+                      value="dm"
                       className="text-xs whitespace-nowrap px-3 py-1.5 data-[state=active]:bg-neon-cyan/20 data-[state=active]:text-neon-cyan"
                     >
-                      Favourites
+                      DM
                     </TabsTrigger>
                     <TabsTrigger
                       value="groups"
