@@ -1,0 +1,195 @@
+# KLUSTER - Campus Communication Platform
+
+> Transform your campus into a connected community
+
+## Overview
+
+KLUSTER is a secure, all-in-one campus communication platform that eliminates app chaos by unifying social networking, academic collaboration, and student engagement tools in one domain-verified platform.
+
+## Core Features
+
+### Social Networking
+- Campus-wide social feed (Cluster)
+- Real-time posts, comments, and reactions
+- Media sharing with carousel support
+- User profiles and connections
+- Domain-verified access control
+
+### Real-Time Chat
+- Direct messaging and group chats
+- Unread message indicators
+- Real-time notifications
+- Secure end-to-end communication
+
+### Campus Startups
+- Startup discovery and investment platform
+- Advanced filtering (risk level, subscription type, investment amount)
+- Collapsible filter sections for better UX
+- Startup cards with detailed information
+- Featured carousel for highlights
+
+### Events & Calendar
+- Campus event management
+- Calendar integration
+- Event creation and RSVP
+- Event discovery and filtering
+
+### Resource Library
+- Shared academic resources
+- Document management
+- Collaborative learning materials
+
+### Leaderboard & Gamification
+- Student engagement tracking
+- Achievement system
+- Competitive rankings
+
+### Additional Features
+- Notifications center
+- Profile customization
+- Theme switching (light/dark mode)
+- Search functionality
+- Mobile-responsive design
+
+## Technology Stack
+
+- **Framework**: Next.js 14+ (App Router)
+- **UI Components**: Shadcn/ui with Radix UI
+- **Styling**: Tailwind CSS with custom cyber/neon theme
+- **Authentication**: Supabase Auth
+- **Database**: Supabase (PostgreSQL)
+- **Media Uploads**: ImageKit integration
+- **State Management**: React Context API
+- **Real-time**: Supabase Realtime subscriptions
+
+## Architecture
+
+### Page Structure
+```
+/cluster - Social feed
+/chat - Messaging
+/startups - Startup discovery platform
+/events - Event management
+/calendar - Calendar view
+/library - Resource library
+/leaderboard - User rankings
+/notifications - Notification center
+/profile - User profiles
+/settings - User settings
+```
+
+### Component Architecture
+- Modular, reusable components
+- Separated concerns (FilterSection, StartupCard, etc.)
+- Custom hooks for shared logic
+- Context providers for global state
+
+## Design System
+
+### Colors
+- **Primary**: Neon Cyan (#00D9FF)
+- **Secondary**: Neon Purple (#8B5CF6)
+- **Accent**: Neon Pink (#FF006E)
+- **Background**: Cyber Darker (#0a0a0f)
+- **Cards**: Semi-transparent with backdrop blur
+
+### Typography
+- **Font**: Inter (Google Fonts)
+- **Headings**: Gradient text effects
+- **Body**: Muted foreground colors
+
+### UI Patterns
+- Collapsible sections
+- Glassmorphism effects
+- Smooth transitions and animations
+- Hover states with neon glows
+- Responsive grid layouts
+
+## API Endpoints
+
+### Authentication
+- `/api/auth/*` - Supabase auth callbacks
+
+### Media
+- `/api/imagekit/auth` - ImageKit authentication
+- `/api/imagekit/delete` - Media deletion
+
+## Database Schema
+
+### Key Tables
+- `profiles` - User profiles and metadata
+- `posts` - Social feed posts
+- `comments` - Post comments
+- `messages` - Chat messages
+- `groups` - Group chats
+- `events` - Campus events
+- `carousel_slides` - Featured content
+
+## Security Features
+
+- Domain-verified email authentication
+- Row-level security policies
+- Protected routes with middleware
+- Secure file uploads with validation
+- CORS and CSP headers
+
+## SEO Optimization
+
+- Comprehensive meta tags
+- Open Graph for social sharing
+- Twitter Card support
+- Structured data (JSON-LD)
+- Dynamic sitemap generation
+- Optimized robots.txt
+- PWA manifest
+
+## Development
+
+### Local Setup
+1. Clone repository
+2. Install dependencies: `npm install`
+3. Configure environment variables
+4. Run development server: `npm run dev`
+
+### Environment Variables
+- `NEXT_PUBLIC_SUPABASE_URL`
+- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+- `NEXT_PUBLIC_IMAGEKIT_*` credentials
+
+## Deployment
+
+- Hosted on Vercel
+- Automatic deployments from main branch
+- Environment variables configured in Vercel dashboard
+- Custom domain: kluster.app
+
+## Target Audience
+
+- University students
+- College faculty
+- Campus administrators
+- Student organizations
+- Academic communities
+
+## Competitive Advantages
+
+1. **All-in-One Solution**: Replaces 7+ separate apps
+2. **Domain Verification**: Ensures campus-only access
+3. **Security First**: Built with privacy in mind
+4. **Modern UX**: Sleek, fast, intuitive interface
+5. **Feature Rich**: Social + Academic + Events in one place
+
+## Support
+
+- Email: support@kluster.app
+- Twitter: @KlusterApp
+- GitHub: github.com/kluster0009-glitch
+
+## License
+
+Proprietary - All rights reserved
+
+---
+
+Last Updated: November 2025
+Version: 0.2.5
