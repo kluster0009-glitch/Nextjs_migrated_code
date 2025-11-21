@@ -351,10 +351,10 @@ export default function PublicProfilePage() {
 
             {/* Avatar & Basic Info */}
             <div className="px-6 pb-6">
-              <div className="flex flex-col md:flex-row md:items-end md:justify-between -mt-16 md:-mt-20">
+              <div className="flex flex-col md:flex-row md:items-end md:justify-between">
                 <div className="flex flex-col md:flex-row md:items-end gap-4">
                   {/* Avatar */}
-                  <Avatar className="w-32 h-32 border-4 border-cyber-darker">
+                  <Avatar className="w-32 h-32 border-4 border-cyber-darker -mt-16 :md:-mt-2">
                     <AvatarImage src={profile?.profile_picture} />
                     <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-3xl">
                       {getUserInitials(profile?.full_name)}
