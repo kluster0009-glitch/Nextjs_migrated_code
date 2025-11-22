@@ -151,10 +151,10 @@ export function AppSidebar() {
                   <Button
                     onClick={() => setIsCreatePostOpen(true)}
                     className={`${
-                      open ? "w-full" : "w-10 h-10 p-0"
-                    } bg-gradient-to-r from-neon-purple to-neon-cyan text-black font-semibold`}
+                      open ? "w-full justify-start" : "w-10 h-10 p-0 flex items-center justify-center"
+                    } bg-gradient-to-r from-neon-purple to-neon-cyan text-black font-semibold hover:opacity-90 transition-opacity`}
                   >
-                    <Plus className="w-4 h-4" />
+                    <Plus className={`w-4 h-4 ${open ? "" : "m-0"}`} />
                     {open && <span className="ml-2">Create Post</span>}
                   </Button>
                 </SidebarMenuItem>

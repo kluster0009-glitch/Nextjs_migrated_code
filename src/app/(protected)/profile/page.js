@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Progress } from "@/components/ui/progress";
 import {
   Camera,
   Mail,
@@ -45,6 +46,8 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
 import { MediaCarousel } from "@/components/MediaCarousel";
+import { useImageKitUpload } from "@/hooks/use-imagekit-upload";
+import { getOptimizedUrl } from "@/lib/imagekit/upload";
 
 export default function ProfilePage() {
   const { user } = useAuth();
@@ -56,6 +59,7 @@ export default function ProfilePage() {
   const [uploadingBanner, setUploadingBanner] = useState(false);
   const fileInputRef = useRef(null);
   const bannerInputRef = useRef(null);
+  const { upload: uploadToImageKit } = useImageKitUpload();
 
   // Real data from database
   const [userPosts, setUserPosts] = useState([]);
@@ -65,13 +69,11 @@ export default function ProfilePage() {
   const [followers, setFollowers] = useState([]);
   const [following, setFollowing] = useState([]);
   const [stats, setStats] = useState({
-    postsCount: 0,
-    likesReceived: 0,
-    commentsCount: 0,
-    likesGiven: 0,
     followersCount: 0,
     followingCount: 0,
   });
+
+  const [profileCompletion, setProfileCompletion] = useState(0);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -92,6 +94,7 @@ export default function ProfilePage() {
         roll_number: profile.roll_number || "",
         banner_image: profile.banner_image || "",
       });
+      calculateProfileCompletion();
     }
   }, [profile]);
 
@@ -211,18 +214,43 @@ export default function ProfilePage() {
       setFollowing(followingList);
 
       setStats({
-        postsCount: posts?.length || 0,
-        likesReceived: totalLikesReceived,
-        commentsCount: commentsCount || 0,
-        likesGiven: likesGiven || 0,
         followersCount,
         followingCount,
       });
+
+      // Calculate profile completion
+      calculateProfileCompletion();
     } catch (error) {
       console.error("Error fetching user data:", error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateProfileCompletion = () => {
+    if (!profile) {
+      setProfileCompletion(0);
+      return;
+    }
+
+    const fields = [
+      { key: 'full_name', weight: 15 },
+      { key: 'bio', weight: 20 },
+      { key: 'college_name', weight: 15 },
+      { key: 'department', weight: 15 },
+      { key: 'roll_number', weight: 10 },
+      { key: 'profile_picture', weight: 15 },
+      { key: 'banner_image', weight: 10 },
+    ];
+
+    let completedWeight = 0;
+    fields.forEach(field => {
+      if (profile[field.key] && profile[field.key].toString().trim() !== '') {
+        completedWeight += field.weight;
+      }
+    });
+
+    setProfileCompletion(completedWeight);
   };
 
   const getUserInitials = () => {
@@ -254,37 +282,19 @@ export default function ProfilePage() {
 
     setUploading(true);
     try {
-      const supabase = createClient();
+      // Upload to ImageKit
+      const result = await uploadToImageKit(file, "avatars", `avatar-${user.id}-${Date.now()}`);
 
-      // Generate unique filename
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `avatars/${fileName}`;
-
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("profile-images")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: true,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("profile-images").getPublicUrl(filePath);
-
-      // Update profile with image URL
+      // Update profile with image URL from ImageKit
       const { error } = await updateProfile({
-        profile_picture: publicUrl,
+        profile_picture: result.url,
       });
 
       if (error) throw error;
 
       toast.success("Profile picture updated successfully!");
       refreshProfile();
+      calculateProfileCompletion();
     } catch (error) {
       console.error("Error uploading avatar:", error);
       toast.error("Failed to upload profile picture. Please try again.");
@@ -311,37 +321,19 @@ export default function ProfilePage() {
 
     setUploadingBanner(true);
     try {
-      const supabase = createClient();
+      // Upload to ImageKit
+      const result = await uploadToImageKit(file, "banners", `banner-${user.id}-${Date.now()}`);
 
-      // Generate unique filename
-      const fileExt = file.name.split(".").pop();
-      const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-      const filePath = `banners/${fileName}`;
-
-      // Upload to Supabase Storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("profile-images")
-        .upload(filePath, file, {
-          cacheControl: "3600",
-          upsert: true,
-        });
-
-      if (uploadError) throw uploadError;
-
-      // Get public URL
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("profile-images").getPublicUrl(filePath);
-
-      // Update profile with banner URL
+      // Update profile with banner URL from ImageKit
       const { error } = await updateProfile({
-        banner_image: publicUrl,
+        banner_image: result.url,
       });
 
       if (error) throw error;
 
       toast.success("Banner updated successfully!");
       refreshProfile();
+      calculateProfileCompletion();
     } catch (error) {
       console.error("Error uploading banner:", error);
       toast.error("Failed to upload banner. Please try again.");
@@ -366,6 +358,7 @@ export default function ProfilePage() {
       toast.success("Profile updated successfully!");
       setIsEditing(false);
       refreshProfile();
+      calculateProfileCompletion();
     } catch (error) {
       console.error("Error updating profile:", error);
       toast.error("Failed to update profile");
@@ -440,12 +433,6 @@ export default function ProfilePage() {
 
   const statCards = [
     {
-      label: "Posts",
-      value: stats.postsCount,
-      icon: MessageSquare,
-      color: "text-neon-cyan",
-    },
-    {
       label: "Followers",
       value: stats.followersCount,
       icon: User,
@@ -457,43 +444,25 @@ export default function ProfilePage() {
       icon: User,
       color: "text-neon-pink",
     },
-    {
-      label: "Likes Received",
-      value: stats.likesReceived,
-      icon: Heart,
-      color: "text-neon-pink",
-    },
-    {
-      label: "Comments",
-      value: stats.commentsCount,
-      icon: MessageCircle,
-      color: "text-neon-purple",
-    },
-    {
-      label: "Likes Given",
-      value: stats.likesGiven,
-      icon: Sparkles,
-      color: "text-neon-cyan",
-    },
   ];
 
   const achievements = [];
-  if (stats.postsCount > 0)
+  if (profileCompletion === 100)
     achievements.push({
-      name: "First Post",
-      icon: MessageSquare,
+      name: "Profile Complete",
+      icon: Award,
       color: "text-neon-purple",
     });
-  if (stats.likesReceived >= 10)
+  if (stats.followersCount >= 10)
     achievements.push({
-      name: "10 Likes",
+      name: "10 Followers",
       icon: Trophy,
       color: "text-neon-cyan",
     });
-  if (stats.commentsCount >= 5)
+  if (stats.followingCount >= 5)
     achievements.push({
-      name: "Active Commenter",
-      icon: MessageCircle,
+      name: "Active Networker",
+      icon: User,
       color: "text-green-500",
     });
   achievements.push({
@@ -511,7 +480,13 @@ export default function ProfilePage() {
           <div className="h-48 md:h-64 bg-gradient-to-r from-neon-purple via-neon-cyan to-neon-pink relative overflow-hidden group">
             {profile?.banner_image && (
               <img
-                src={profile.banner_image}
+                src={getOptimizedUrl(profile.banner_image, {
+                  width: 1200,
+                  height: 320,
+                  crop: "at_max",
+                  quality: 90,
+                  format: "auto"
+                })}
                 alt="Profile Banner"
                 className="w-full h-full object-cover"
               />
@@ -622,8 +597,51 @@ export default function ProfilePage() {
         </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column - Stats & Achievements */}
+          {/* Left Column - Profile Completion & Stats & Achievements */}
           <div className="space-y-6">
+            {/* Profile Completion */}
+            <Card className="border-cyber-border bg-cyber-card/50 backdrop-blur-xl">
+              <CardHeader>
+                <CardTitle className="text-lg">Profile Completion</CardTitle>
+                <CardDescription>Complete your profile to stand out</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-sm font-medium">Progress</span>
+                    <span className="text-2xl font-bold bg-gradient-to-r from-neon-cyan to-neon-purple bg-clip-text text-transparent">
+                      {profileCompletion}%
+                    </span>
+                  </div>
+                  <Progress value={profileCompletion} className="h-3" />
+                  
+                  {profileCompletion < 100 && (
+                    <div className="mt-4 p-3 rounded-lg bg-cyber-darker/50 border border-neon-cyan/20">
+                      <p className="text-xs text-muted-foreground mb-2">Complete these to reach 100%:</p>
+                      <ul className="space-y-1 text-xs">
+                        {!profile?.full_name && <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>Add your full name (15%)</li>}
+                        {!profile?.bio && <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>Write a bio (20%)</li>}
+                        {!profile?.college_name && <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>Add college name (15%)</li>}
+                        {!profile?.department && <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>Add department (15%)</li>}
+                        {!profile?.roll_number && <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>Add roll number (10%)</li>}
+                        {!profile?.profile_picture && <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>Upload profile picture (15%)</li>}
+                        {!profile?.banner_image && <li className="flex items-center gap-2"><span className="w-1.5 h-1.5 rounded-full bg-neon-cyan"></span>Upload banner image (10%)</li>}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {profileCompletion === 100 && (
+                    <div className="mt-4 p-3 rounded-lg bg-gradient-to-r from-neon-cyan/10 to-neon-purple/10 border border-neon-purple/30">
+                      <p className="text-sm text-center flex items-center justify-center gap-2">
+                        <Sparkles className="w-4 h-4 text-neon-purple" />
+                        <span className="font-semibold">Profile Complete!</span>
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Stats */}
             <Card className="border-cyber-border bg-cyber-card/50 backdrop-blur-xl">
               <CardHeader>
@@ -679,7 +697,7 @@ export default function ProfilePage() {
               <TabsList className="bg-cyber-card/50 border border-cyber-border">
                 <TabsTrigger value="about">About</TabsTrigger>
                 <TabsTrigger value="posts">
-                  Posts ({stats.postsCount})
+                  Posts ({userPosts.length})
                 </TabsTrigger>
                 <TabsTrigger value="liked">
                   Liked ({likedPosts.length})

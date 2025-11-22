@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import Link from "next/link";
+import { getOptimizedUrl } from "@/lib/imagekit/upload";
 
 export default function PublicProfilePage() {
   const { user } = useAuth();
@@ -342,7 +343,13 @@ export default function PublicProfilePage() {
             <div className="h-48 md:h-64 bg-gradient-to-r from-neon-purple via-neon-cyan to-neon-pink relative overflow-hidden">
               {profile?.banner_image && (
                 <img
-                  src={profile.banner_image}
+                  src={getOptimizedUrl(profile.banner_image, {
+                    width: 1200,
+                    height: 320,
+                    crop: "at_max",
+                    quality: 90,
+                    format: "auto"
+                  })}
                   alt="Profile Banner"
                   className="w-full h-full object-cover"
                 />

@@ -30,6 +30,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ProfileHoverCard } from "@/components/ProfileHoverCard";
 
 export function CommentsDialog({ open, onOpenChange, post }) {
   const { user } = useAuth();
@@ -224,53 +225,51 @@ export function CommentsDialog({ open, onOpenChange, post }) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className={`${
-          hasImage ? "max-w-5xl" : "max-w-2xl"
-        } h-[90vh] p-0 gap-0 bg-cyber-card border-cyber-border overflow-hidden`}
+        className="max-w-screen-2xl w-screen h-screen max-h-screen p-0 gap-0 bg-white border-0 overflow-hidden rounded-none"
       >
         <DialogTitle className="sr-only">
           Comments on {post?.title || "post"}
         </DialogTitle>
-        <div
-          className={`grid ${
-            hasImage ? "grid-cols-1 md:grid-cols-2" : "grid-cols-1"
-          } h-full max-h-[90vh]`}
-        >
-          {/* Left side - Post Image */}
-          {hasImage && (
-            <div className="hidden md:flex bg-cyber-darker items-center justify-center border-r border-cyber-border overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_500px] h-full w-full">
+          {/* Left side - Post Media */}
+          <div className="hidden md:flex bg-black items-center justify-center overflow-hidden relative">
+            {post.media && post.media.length > 0 ? (
+              <div className="w-full h-full flex items-center justify-center">
+                {post.media[0].type === "image" ? (
+                  <img
+                    src={post.media[0].url}
+                    alt={post.title}
+                    className="max-w-full max-h-full w-auto h-auto object-contain"
+                  />
+                ) : (
+                  <video
+                    src={post.media[0].url}
+                    controls
+                    className="max-w-full max-h-full w-auto h-auto object-contain"
+                  />
+                )}
+              </div>
+            ) : post.image_url ? (
               <img
                 src={post.image_url}
                 alt={post.title}
-                className="max-w-full max-h-[90vh] w-auto h-auto object-contain"
-                style={{ minWidth: "300px", minHeight: "300px" }}
+                className="max-w-full max-h-full w-auto h-auto object-contain"
               />
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center justify-center text-gray-500">
+                <MessageCircle className="w-16 h-16" />
+              </div>
+            )}
+          </div>
 
           {/* Right side - Comments Section */}
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col h-full bg-white">
             {/* Post Header */}
-            <div className="p-4 border-b border-cyber-border">
+            <div className="p-4 border-b border-gray-200">
               <div className="flex items-center gap-3">
-                <Avatar
-                  className="cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all"
-                  onClick={() => {
-                    if (post.user_id !== user?.id) {
-                      window.location.href = `/profile/${post.user_id}`;
-                    } else {
-                      window.location.href = "/profile";
-                    }
-                  }}
-                >
-                  <AvatarImage src={post.profiles?.profile_picture} />
-                  <AvatarFallback className="bg-neon-purple/20 text-neon-purple">
-                    {getUserInitials(post.profiles?.full_name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1">
-                  <p
-                    className="font-semibold text-foreground cursor-pointer hover:text-neon-cyan transition-colors"
+                <ProfileHoverCard userId={post.user_id} currentUserId={user?.id}>
+                  <Avatar
+                    className="cursor-pointer w-10 h-10 ring-2 ring-white hover:ring-gray-200 transition-all"
                     onClick={() => {
                       if (post.user_id !== user?.id) {
                         window.location.href = `/profile/${post.user_id}`;
@@ -279,37 +278,16 @@ export function CommentsDialog({ open, onOpenChange, post }) {
                       }
                     }}
                   >
-                    {post.profiles?.full_name || "Anonymous"}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {formatTimeAgo(post.created_at)}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Post Caption */}
-            <div className="p-4 border-b border-cyber-border">
-              <div className="flex gap-3">
-                <Avatar
-                  className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all"
-                  onClick={() => {
-                    if (post.user_id !== user?.id) {
-                      window.location.href = `/profile/${post.user_id}`;
-                    } else {
-                      window.location.href = "/profile";
-                    }
-                  }}
-                >
-                  <AvatarImage src={post.profiles?.profile_picture} />
-                  <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-xs">
-                    {getUserInitials(post.profiles?.full_name)}
-                  </AvatarFallback>
-                </Avatar>
+                    <AvatarImage src={post.profiles?.profile_picture} />
+                    <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-sm font-semibold">
+                      {getUserInitials(post.profiles?.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                </ProfileHoverCard>
                 <div className="flex-1">
-                  <p className="text-sm">
-                    <span
-                      className="font-semibold mr-2 cursor-pointer hover:text-neon-cyan transition-colors"
+                  <ProfileHoverCard userId={post.user_id} currentUserId={user?.id}>
+                    <p
+                      className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-gray-600 transition-colors"
                       onClick={() => {
                         if (post.user_id !== user?.id) {
                           window.location.href = `/profile/${post.user_id}`;
@@ -319,12 +297,56 @@ export function CommentsDialog({ open, onOpenChange, post }) {
                       }}
                     >
                       {post.profiles?.full_name || "Anonymous"}
-                    </span>
-                    <span className="text-muted-foreground">
+                    </p>
+                  </ProfileHoverCard>
+                  <p className="text-xs text-gray-500">
+                    {formatTimeAgo(post.created_at)}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Post Caption */}
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex gap-3">
+                <ProfileHoverCard userId={post.user_id} currentUserId={user?.id}>
+                  <Avatar
+                    className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-gray-200 transition-all"
+                    onClick={() => {
+                      if (post.user_id !== user?.id) {
+                        window.location.href = `/profile/${post.user_id}`;
+                      } else {
+                        window.location.href = "/profile";
+                      }
+                    }}
+                  >
+                    <AvatarImage src={post.profiles?.profile_picture} />
+                    <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-xs">
+                      {getUserInitials(post.profiles?.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                </ProfileHoverCard>
+                <div className="flex-1">
+                  <p className="text-sm">
+                    <ProfileHoverCard userId={post.user_id} currentUserId={user?.id}>
+                      <span
+                        className="font-semibold mr-2 cursor-pointer hover:text-gray-600 transition-colors text-gray-900"
+                        onClick={() => {
+                          if (post.user_id !== user?.id) {
+                            window.location.href = `/profile/${post.user_id}`;
+                          } else {
+                            window.location.href = "/profile";
+                          }
+                        }}
+                      >
+                        {post.profiles?.full_name || "Anonymous"}
+                      </span>
+                    </ProfileHoverCard>
+                    <span className="text-gray-900">
                       {post.content}
                     </span>
                   </p>
-                  <p className="text-xs text-muted-foreground mt-1">
+                  <p className="text-xs text-gray-500 mt-1">
                     {formatTimeAgo(post.created_at)}
                   </p>
                 </div>
@@ -335,13 +357,13 @@ export function CommentsDialog({ open, onOpenChange, post }) {
             <ScrollArea className="flex-1 p-4" ref={scrollRef}>
               {loadingComments ? (
                 <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-neon-purple"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-gray-200 border-t-pink-500"></div>
                 </div>
               ) : comments.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-12 text-center">
-                  <MessageCircle className="w-12 h-12 text-muted-foreground opacity-30 mb-3" />
-                  <p className="text-muted-foreground">No comments yet</p>
-                  <p className="text-sm text-muted-foreground">
+                  <MessageCircle className="w-12 h-12 text-gray-300 opacity-50 mb-3" />
+                  <p className="text-gray-500">No comments yet</p>
+                  <p className="text-sm text-gray-400">
                     Be the first to comment!
                   </p>
                 </div>
@@ -349,43 +371,47 @@ export function CommentsDialog({ open, onOpenChange, post }) {
                 <div className="space-y-4">
                   {comments.map((comment) => (
                     <div key={comment.id} className="flex gap-3 group">
-                      <Avatar
-                        className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all"
-                        onClick={() => {
-                          if (comment.user_id !== user?.id) {
-                            window.location.href = `/profile/${comment.user_id}`;
-                          } else {
-                            window.location.href = "/profile";
-                          }
-                        }}
-                      >
-                        <AvatarImage src={comment.profile?.profile_picture} />
-                        <AvatarFallback className="bg-neon-cyan/20 text-neon-cyan text-xs">
-                          {getUserInitials(comment.profile?.full_name)}
-                        </AvatarFallback>
-                      </Avatar>
+                      <ProfileHoverCard userId={comment.user_id} currentUserId={user?.id}>
+                        <Avatar
+                          className="w-8 h-8 cursor-pointer hover:ring-2 hover:ring-gray-200 transition-all"
+                          onClick={() => {
+                            if (comment.user_id !== user?.id) {
+                              window.location.href = `/profile/${comment.user_id}`;
+                            } else {
+                              window.location.href = "/profile";
+                            }
+                          }}
+                        >
+                          <AvatarImage src={comment.profile?.profile_picture} />
+                          <AvatarFallback className="bg-gradient-to-br from-blue-400 to-cyan-500 text-white text-xs">
+                            {getUserInitials(comment.profile?.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                      </ProfileHoverCard>
                       <div className="flex-1">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
                             <p className="text-sm">
-                              <span
-                                className="font-semibold mr-2 cursor-pointer hover:text-neon-cyan transition-colors"
-                                onClick={() => {
-                                  if (comment.user_id !== user?.id) {
-                                    window.location.href = `/profile/${comment.user_id}`;
-                                  } else {
-                                    window.location.href = "/profile";
-                                  }
-                                }}
-                              >
-                                {comment.profile?.full_name || "Anonymous"}
-                              </span>
-                              <span className="text-foreground">
+                              <ProfileHoverCard userId={comment.user_id} currentUserId={user?.id}>
+                                <span
+                                  className="font-semibold mr-2 cursor-pointer hover:text-gray-600 transition-colors text-gray-900"
+                                  onClick={() => {
+                                    if (comment.user_id !== user?.id) {
+                                      window.location.href = `/profile/${comment.user_id}`;
+                                    } else {
+                                      window.location.href = "/profile";
+                                    }
+                                  }}
+                                >
+                                  {comment.profile?.full_name || "Anonymous"}
+                                </span>
+                              </ProfileHoverCard>
+                              <span className="text-gray-900">
                                 {comment.content}
                               </span>
                             </p>
                             <div className="flex items-center gap-3 mt-1">
-                              <p className="text-xs text-muted-foreground">
+                              <p className="text-xs text-gray-500">
                                 {formatTimeAgo(comment.created_at)}
                               </p>
                             </div>
@@ -405,13 +431,13 @@ export function CommentsDialog({ open, onOpenChange, post }) {
                               </DropdownMenuTrigger>
                               <DropdownMenuContent
                                 align="end"
-                                className="bg-cyber-card border-cyber-border"
+                                className="bg-white border-gray-200"
                               >
                                 <DropdownMenuItem
                                   onClick={() =>
                                     handleDeleteComment(comment.id)
                                   }
-                                  className="text-destructive focus:text-destructive"
+                                  className="text-red-600 focus:text-red-600"
                                 >
                                   <Trash2 className="w-4 h-4 mr-2" />
                                   Delete
@@ -428,12 +454,12 @@ export function CommentsDialog({ open, onOpenChange, post }) {
             </ScrollArea>
 
             {/* Comment Input */}
-            <div className="border-t border-cyber-border bg-cyber-card">
+            <div className="border-t border-gray-200 bg-white">
               <form onSubmit={handleSubmitComment} className="p-4">
                 <div className="flex items-center gap-3">
                   <Avatar className="w-8 h-8">
                     <AvatarImage src={getAvatarUrl()} />
-                    <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-xs">
+                    <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-xs">
                       {getUserInitials(profile?.full_name)}
                     </AvatarFallback>
                   </Avatar>
@@ -441,7 +467,7 @@ export function CommentsDialog({ open, onOpenChange, post }) {
                     value={newComment}
                     onChange={(e) => setNewComment(e.target.value)}
                     placeholder="Add a comment..."
-                    className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0"
+                    className="flex-1 bg-transparent border-0 focus-visible:ring-0 focus-visible:ring-offset-0 text-gray-900 placeholder:text-gray-400"
                     disabled={isSubmitting}
                     autoComplete="off"
                   />
@@ -449,12 +475,12 @@ export function CommentsDialog({ open, onOpenChange, post }) {
                     type="submit"
                     size="sm"
                     disabled={!newComment.trim() || isSubmitting}
-                    className="bg-gradient-to-r from-neon-cyan to-neon-purple text-black font-semibold disabled:opacity-50 flex-shrink-0"
+                    className="bg-transparent hover:bg-transparent text-blue-500 hover:text-blue-700 font-semibold disabled:opacity-50 flex-shrink-0 p-0 h-auto"
                   >
                     {isSubmitting ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-black" />
+                      <div className="animate-spin rounded-full h-4 w-4 border-2 border-gray-200 border-t-blue-500" />
                     ) : (
-                      <Send className="w-4 h-4" />
+                      "Post"
                     )}
                   </Button>
                 </div>

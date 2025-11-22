@@ -33,10 +33,7 @@ export function MediaCarousel({ media = [] }) {
     return () => emblaApi.off("select", onSelect);
   }, [emblaApi, onSelect]);
 
-  console.log("🎠 MediaCarousel received media:", media);
-
   if (!media || media.length === 0) {
-    console.log("⚠️ No media to display");
     return null;
   }
 
@@ -44,7 +41,7 @@ export function MediaCarousel({ media = [] }) {
   if (media.length === 1) {
     const item = media[0];
     return (
-      <div className="relative w-full rounded-lg overflow-hidden bg-cyber-darker">
+      <div className="relative w-full bg-black">
         {item.type === "image" ? (
           <img
             src={item.url}
@@ -64,14 +61,14 @@ export function MediaCarousel({ media = [] }) {
 
   // Multiple media - show carousel
   return (
-    <div className="relative w-full">
+    <div className="relative w-full bg-black">
       {/* Carousel Container */}
-      <div className="overflow-hidden rounded-lg" ref={emblaRef}>
+      <div className="overflow-hidden" ref={emblaRef}>
         <div className="flex">
           {media.map((item, index) => (
             <div
               key={index}
-              className="flex-[0_0_100%] min-w-0 relative bg-cyber-darker"
+              className="flex-[0_0_100%] min-w-0 relative"
             >
               {item.type === "image" ? (
                 <img
@@ -98,10 +95,10 @@ export function MediaCarousel({ media = [] }) {
         <Button
           variant="secondary"
           size="icon"
-          className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm border-0"
+          className="absolute left-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-white/90 hover:bg-white shadow-lg border-0"
           onClick={scrollPrev}
         >
-          <ChevronLeft className="w-5 h-5 text-white" />
+          <ChevronLeft className="w-5 h-5 text-gray-900" />
         </Button>
       )}
 
@@ -109,33 +106,30 @@ export function MediaCarousel({ media = [] }) {
         <Button
           variant="secondary"
           size="icon"
-          className="absolute right-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 backdrop-blur-sm border-0"
+          className="absolute right-3 top-1/2 -translate-y-1/2 h-7 w-7 rounded-full bg-white/90 hover:bg-white shadow-lg border-0"
           onClick={scrollNext}
         >
-          <ChevronRight className="w-5 h-5 text-white" />
+          <ChevronRight className="w-5 h-5 text-gray-900" />
         </Button>
       )}
 
-      {/* Dots Indicator */}
-      <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
-        {media.map((_, index) => (
-          <button
-            key={index}
-            className={`w-1.5 h-1.5 rounded-full transition-all ${
-              index === selectedIndex
-                ? "bg-white w-6"
-                : "bg-white/50 hover:bg-white/75"
-            }`}
-            onClick={() => emblaApi?.scrollTo(index)}
-            aria-label={`Go to slide ${index + 1}`}
-          />
-        ))}
-      </div>
-
-      {/* Counter */}
-      <div className="absolute top-3 right-3 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-full text-xs text-white">
-        {selectedIndex + 1} / {media.length}
-      </div>
+      {/* Dots Indicator - Instagram style */}
+      {media.length > 1 && (
+        <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-1.5">
+          {media.map((_, index) => (
+            <button
+              key={index}
+              className={`h-1.5 rounded-full transition-all ${
+                index === selectedIndex
+                  ? "bg-blue-500 w-1.5"
+                  : "bg-white/60 hover:bg-white/80 w-1.5"
+              }`}
+              onClick={() => emblaApi?.scrollTo(index)}
+              aria-label={`Go to slide ${index + 1}`}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -21,6 +21,7 @@ import {
 import NoticeCarousel from "@/components/NoticeCarousel";
 import { CommentsDialog } from "@/components/CommentsDialog";
 import { MediaCarousel } from "@/components/MediaCarousel";
+import { ProfileHoverCard } from "@/components/ProfileHoverCard";
 import { formatDistanceToNow } from "date-fns";
 
 export default function ClusterPage() {
@@ -35,6 +36,7 @@ export default function ClusterPage() {
   const [userSaves, setUserSaves] = useState(new Set());
   const [selectedPost, setSelectedPost] = useState(null);
   const [isCommentsOpen, setIsCommentsOpen] = useState(false);
+  const [likeAnimations, setLikeAnimations] = useState({});
 
   // Fetch posts from database
   const fetchPosts = useCallback(async () => {
@@ -362,6 +364,21 @@ export default function ClusterPage() {
     }
   };
 
+  const handleDoubleClickLike = async (postId) => {
+    if (!user) return;
+    
+    // Show animation
+    setLikeAnimations(prev => ({ ...prev, [postId]: true }));
+    setTimeout(() => {
+      setLikeAnimations(prev => ({ ...prev, [postId]: false }));
+    }, 1000);
+
+    // Only like if not already liked
+    if (!userLikes.has(postId)) {
+      await handleLike(postId);
+    }
+  };
+
   const handleSave = async (postId) => {
     if (!user) return;
 
@@ -482,56 +499,35 @@ export default function ClusterPage() {
   };
 
   return (
-    <div className="min-h-screen bg-cyber-darker">
-      {/* Main Content */}
-      <div className="w-full py-6 px-6">
-        {/* Carousel Banner - Full Width */}
-        <div>
+    <div className="min-h-screen bg-gradient-to-br from-cyber-darker via-cyber-dark to-cyber-darker">
+      {/* Main Content - Instagram-style centered layout */}
+      <div className="max-w-7xl mx-auto">
+        {/* Carousel Banner - Centered */}
+        <div className="px-4 py-6">
           <NoticeCarousel />
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* Main Feed */}
-          <div className="lg:col-span-9">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 px-4 pb-8">
+          {/* Main Feed - Centered column */}
+          <div className="lg:col-span-2">
 
-            {/* New Post Notification - X-style */}
+            {/* New Post Notification - Instagram-style */}
             {showNewPostNotification && (
-              <div className="mb-4 flex justify-center sticky top-4 z-10">
+              <div className="mb-6 flex justify-center sticky top-20 z-10">
                 <Button
                   onClick={handleRefreshPosts}
-                  className="bg-gradient-to-r from-neon-cyan to-neon-purple text-black font-semibold shadow-lg hover:shadow-xl transition-all duration-300 rounded-full px-6 py-3 flex items-center gap-3 animate-in slide-in-from-top"
+                  className="bg-white text-black hover:bg-gray-100 font-medium shadow-xl rounded-full px-6 py-2.5 flex items-center gap-2 animate-in slide-in-from-top border border-gray-200"
                 >
-                  {/* Author avatars */}
-                  <div className="flex -space-x-2">
-                    {newPostAuthors.slice(0, 2).map((author, idx) => (
-                      <Avatar
-                        key={idx}
-                        className="w-8 h-8 border-2 border-black"
-                      >
-                        <AvatarImage src={author?.profile_picture} />
-                        <AvatarFallback className="bg-neon-purple/30 text-xs">
-                          {getUserInitials(author?.full_name)}
-                        </AvatarFallback>
-                      </Avatar>
-                    ))}
-                    {newPostAuthors.length > 2 && (
-                      <div className="w-8 h-8 rounded-full bg-neon-purple/30 border-2 border-black flex items-center justify-center">
-                        <span className="text-xs font-bold">
-                          +{newPostAuthors.length - 2}
-                        </span>
-                      </div>
-                    )}
-                  </div>
+                  <ArrowUp className="w-4 h-4" />
                   <span className="font-semibold">
                     {newPostsCount} new {newPostsCount === 1 ? "post" : "posts"}
                   </span>
-                  <ArrowUp className="w-4 h-4" />
                 </Button>
               </div>
             )}
 
-            {/* Search Bar */}
-            <div className="mb-6">
+            {/* Search Bar - Hidden on Instagram-style layout */}
+            <div className="mb-6 hidden">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                 <Input
@@ -542,8 +538,8 @@ export default function ClusterPage() {
               </div>
             </div>
 
-            {/* Tabs */}
-            <div className="flex gap-4 mb-6">
+            {/* Tabs - Hidden on Instagram-style layout */}
+            <div className="flex gap-4 mb-6 hidden">
               <Button
                 variant={activeTab === "all" ? "default" : "ghost"}
                 onClick={() => setActiveTab("all")}
@@ -579,44 +575,42 @@ export default function ClusterPage() {
               </Button>
             </div>
 
-            {/* Posts Feed */}
+            {/* Posts Feed - Instagram style */}
             <div className="space-y-6">
               {loadingPosts ? (
-                <Card className="border-cyber-border bg-cyber-card/50 backdrop-blur-xl">
-                  <CardContent className="p-12 text-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-neon-purple mx-auto mb-4"></div>
-                    <p className="text-muted-foreground">Loading posts...</p>
-                  </CardContent>
-                </Card>
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                  <div className="p-16 text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-2 border-gray-200 border-t-pink-500 mx-auto mb-4"></div>
+                    <p className="text-gray-500 text-sm">Loading posts...</p>
+                  </div>
+                </div>
               ) : posts.length === 0 ? (
-                <Card className="border-cyber-border bg-cyber-card/50 backdrop-blur-xl">
-                  <CardContent className="p-12 text-center">
-                    <MessageCircle className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                    <h3 className="text-xl font-semibold mb-2">No posts yet</h3>
-                    <p className="text-muted-foreground">
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
+                  <div className="p-16 text-center">
+                    <MessageCircle className="w-16 h-16 mx-auto mb-4 text-gray-300" />
+                    <h3 className="text-xl font-semibold mb-2 text-gray-800">No posts yet</h3>
+                    <p className="text-gray-500">
                       Be the first to share something with the community!
                     </p>
-                  </CardContent>
-                </Card>
+                  </div>
+                </div>
               ) : (
                 posts.map((post) => {
-                  // Get author info from the joined profiles table
                   const authorName =
                     post.profiles?.username || post.profiles?.full_name || "Anonymous User";
                   const authorAvatar = post.profiles?.profile_picture;
-                  const authorUsername = post.profiles?.username;
 
                   return (
                     <Card
                       key={post.id}
-                      className="border-cyber-border bg-cyber-card/50 backdrop-blur-xl"
+                      className="bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow rounded-xl overflow-hidden"
                     >
-                      <CardContent className="p-6">
-                        {/* Post Header */}
-                        <div className="flex items-start justify-between mb-4">
-                          <div className="flex items-center gap-3">
+                      {/* Post Header */}
+                      <div className="flex items-center justify-between p-3 border-b border-gray-100">
+                        <div className="flex items-center gap-3">
+                          <ProfileHoverCard userId={post.user_id} currentUserId={user?.id}>
                             <Avatar
-                              className="cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all"
+                              className="cursor-pointer w-10 h-10 ring-2 ring-white hover:ring-gray-200 transition-all"
                               onClick={() => {
                                 if (post.user_id !== user?.id) {
                                   window.location.href = `/profile/${post.user_id}`;
@@ -626,13 +620,15 @@ export default function ClusterPage() {
                               }}
                             >
                               <AvatarImage src={authorAvatar} />
-                              <AvatarFallback className="bg-neon-purple/20 text-neon-purple">
+                              <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white text-sm font-semibold">
                                 {getUserInitials(authorName)}
                               </AvatarFallback>
                             </Avatar>
-                            <div>
+                          </ProfileHoverCard>
+                          <div>
+                            <ProfileHoverCard userId={post.user_id} currentUserId={user?.id}>
                               <h3
-                                className="font-semibold text-foreground cursor-pointer hover:text-neon-cyan transition-colors"
+                                className="font-semibold text-sm text-gray-900 cursor-pointer hover:text-gray-600 transition-colors"
                                 onClick={() => {
                                   if (post.user_id !== user?.id) {
                                     window.location.href = `/profile/${post.user_id}`;
@@ -643,99 +639,167 @@ export default function ClusterPage() {
                               >
                                 {authorName}
                               </h3>
-                              <p className="text-sm text-muted-foreground">
-                                {formatTimeAgo(post.created_at)}
-                              </p>
-                            </div>
+                            </ProfileHoverCard>
+                            <p className="text-xs text-gray-500">
+                              {formatTimeAgo(post.created_at)}
+                            </p>
                           </div>
-                          <Badge
-                            variant="secondary"
-                            className="bg-cyber-darker/50"
-                          >
-                            {post.category}
-                          </Badge>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-gray-500 hover:text-gray-700 h-8 w-8 p-0"
+                        >
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                            <circle cx="12" cy="5" r="1.5"/>
+                            <circle cx="12" cy="12" r="1.5"/>
+                            <circle cx="12" cy="19" r="1.5"/>
+                          </svg>
+                        </Button>
+                      </div>
 
-                        {/* Post Content */}
-                        <div className="mb-4">
-                          <h4 className="text-xl font-semibold mb-2 text-foreground">
-                            {post.title}
-                          </h4>
-                          <p className="text-muted-foreground mb-4 whitespace-pre-wrap">
-                            {post.content}
-                          </p>
-                          
-                          {/* Media Display - Support both new media array and legacy image_url */}
-                          {post.media && post.media.length > 0 ? (
-                            <MediaCarousel media={post.media} />
-                          ) : post.image_url ? (
-                            <div className="rounded-lg overflow-hidden">
-                              <img
-                                src={post.image_url}
-                                alt="Post content"
-                                className="w-full h-auto object-cover"
-                              />
-                            </div>
-                          ) : null}
-                        </div>
-
-                        {/* Post Actions */}
-                        <div className="flex items-center gap-6 pt-4 border-t border-cyber-border">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleLike(post.id)}
-                            className={`${
-                              userLikes.has(post.id)
-                                ? "text-neon-pink"
-                                : "text-muted-foreground"
-                            } hover:text-neon-pink transition-colors`}
-                          >
-                            <Heart
-                              className={`w-4 h-4 mr-2 ${
-                                userLikes.has(post.id) ? "fill-current" : ""
-                              }`}
+                      {/* Media Display */}
+                      <div 
+                        className="relative select-none"
+                        onDoubleClick={() => handleDoubleClickLike(post.id)}
+                      >
+                        {post.media && post.media.length > 0 ? (
+                          <MediaCarousel media={post.media} />
+                        ) : post.image_url ? (
+                          <div className="relative w-full bg-black">
+                            <img
+                              src={post.image_url}
+                              alt="Post content"
+                              className="w-full h-auto max-h-[600px] object-contain"
                             />
-                            {post.likes_count || 0}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => {
-                              setSelectedPost(post);
-                              setIsCommentsOpen(true);
-                            }}
-                            className="text-muted-foreground hover:text-neon-cyan"
-                          >
-                            <MessageCircle className="w-4 h-4 mr-2" />
-                            {post.comments_count || 0}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="text-muted-foreground hover:text-neon-purple"
-                          >
-                            <Share2 className="w-4 h-4 mr-2" />
-                            Share
-                          </Button>
+                          </div>
+                        ) : null}
+                        
+                        {/* Like Animation Overlay */}
+                        {likeAnimations[post.id] && (
+                          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                            <svg 
+                              className="w-24 h-24 text-white animate-ping" 
+                              fill="currentColor" 
+                              viewBox="0 0 24 24"
+                              style={{ animationDuration: '0.6s', animationIterationCount: 1 }}
+                            >
+                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Post Actions - Instagram style */}
+                      <div className="px-4 pt-3">
+                        <div className="flex items-center justify-between mb-3">
+                          <div className="flex items-center gap-4">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleLike(post.id)}
+                              className="p-0 h-auto hover:bg-transparent group"
+                            >
+                              {userLikes.has(post.id) ? (
+                                <svg className="w-7 h-7 text-red-500" fill="currentColor" viewBox="0 0 24 24">
+                                  <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                                </svg>
+                              ) : (
+                                <svg className="w-7 h-7 text-gray-900 group-hover:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                  <path strokeLinecap="round" strokeLinejoin="round" d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                                </svg>
+                              )}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedPost(post);
+                                setIsCommentsOpen(true);
+                              }}
+                              className="p-0 h-auto hover:bg-transparent group"
+                            >
+                              <svg className="w-7 h-7 text-gray-900 group-hover:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+                              </svg>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="p-0 h-auto hover:bg-transparent group"
+                            >
+                              <svg className="w-7 h-7 text-gray-900 group-hover:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11"/>
+                              </svg>
+                            </Button>
+                          </div>
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleSave(post.id)}
-                            className={`ml-auto ${
-                              userSaves.has(post.id)
-                                ? "text-neon-cyan"
-                                : "text-muted-foreground"
-                            } hover:text-neon-cyan transition-colors`}
+                            className="p-0 h-auto hover:bg-transparent group"
                           >
-                            <Bookmark
-                              className={`w-4 h-4 ${
-                                userSaves.has(post.id) ? "fill-current" : ""
-                              }`}
-                            />
+                            {userSaves.has(post.id) ? (
+                              <svg className="w-6 h-6 text-gray-900" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M17 3H7c-1.1 0-2 .9-2 2v16l7-3 7 3V5c0-1.1-.9-2-2-2z"/>
+                              </svg>
+                            ) : (
+                              <svg className="w-6 h-6 text-gray-900 group-hover:text-gray-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2">
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"/>
+                              </svg>
+                            )}
                           </Button>
                         </div>
-                      </CardContent>
+
+                        {/* Likes count */}
+                        {post.likes_count > 0 && (
+                          <div className="mb-2">
+                            <span className="text-sm font-semibold text-gray-900">
+                              {post.likes_count} {post.likes_count === 1 ? 'like' : 'likes'}
+                            </span>
+                          </div>
+                        )}
+
+                        {/* Post Content */}
+                        <div className="mb-2">
+                          <span className="text-sm">
+                            <ProfileHoverCard userId={post.user_id} currentUserId={user?.id}>
+                              <span className="font-semibold text-gray-900 mr-2 cursor-pointer hover:text-gray-600">
+                                {authorName}
+                              </span>
+                            </ProfileHoverCard>
+                            <span className="text-gray-900">{post.content}</span>
+                          </span>
+                          {post.title && post.title !== post.content && (
+                            <p className="text-sm text-gray-900 mt-1 font-medium">
+                              {post.title}
+                            </p>
+                          )}
+                        </div>
+
+                        {/* Comments count */}
+                        {post.comments_count > 0 && (
+                          <button
+                            onClick={() => {
+                              setSelectedPost(post);
+                              setIsCommentsOpen(true);
+                            }}
+                            className="text-sm text-gray-500 hover:text-gray-700 mb-2 block"
+                          >
+                            View all {post.comments_count} comments
+                          </button>
+                        )}
+
+                        {/* Category badge */}
+                        {post.category && post.category !== 'General' && (
+                          <Badge
+                            variant="secondary"
+                            className="mb-3 bg-gray-100 text-gray-700 text-xs hover:bg-gray-200"
+                          >
+                            {post.category}
+                          </Badge>
+                        )}
+                      </div>
                     </Card>
                   );
                 })
@@ -743,54 +807,112 @@ export default function ClusterPage() {
             </div>
           </div>
 
-          {/* Right Sidebar */}
-          <div className="lg:col-span-3 space-y-6">
-            {/* Trending Topics */}
-            <Card className="border-cyber-border bg-cyber-card/50 backdrop-blur-xl">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold mb-4 text-foreground">
-                  Trending Topics
-                </h3>
-                <div className="space-y-3">
-                  {trendingTopics.map((topic, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between"
-                    >
-                      <span className="text-muted-foreground hover:text-neon-cyan cursor-pointer transition-colors">
-                        {topic.name}
-                      </span>
-                      <Badge variant="secondary" className="bg-cyber-darker/50">
-                        {topic.count}
-                      </Badge>
-                    </div>
-                  ))}
+          {/* Right Sidebar - Instagram style */}
+          <div className="hidden lg:block space-y-4 sticky top-20 self-start">
+            {/* User Profile Card */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <div className="flex items-center gap-3 mb-4">
+                <Avatar className="w-14 h-14">
+                  <AvatarImage src={user?.user_metadata?.avatar_url} />
+                  <AvatarFallback className="bg-gradient-to-br from-pink-400 to-purple-500 text-white font-semibold">
+                    {getUserInitials(user?.user_metadata?.full_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1">
+                  <h4 className="font-semibold text-sm text-gray-900">
+                    {user?.user_metadata?.username || user?.user_metadata?.full_name || "User"}
+                  </h4>
+                  <p className="text-xs text-gray-500">
+                    {user?.email}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
+              <Button
+                variant="ghost"
+                className="w-full text-xs font-semibold text-blue-500 hover:text-blue-700 hover:bg-transparent"
+                onClick={() => window.location.href = "/profile"}
+              >
+                View Profile
+              </Button>
+            </div>
 
-            {/* Quick Stats */}
-            <Card className="border-cyber-border bg-cyber-card/50 backdrop-blur-xl">
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold mb-4 text-foreground">
-                  Quick Stats
+            {/* Suggestions for you */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-semibold text-gray-500">
+                  Suggestions For You
                 </h3>
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Posts Today</span>
-                    <span className="text-neon-cyan font-semibold">
-                      {stats.todayPosts}
-                    </span>
+                <button className="text-xs font-semibold text-gray-900 hover:text-gray-600">
+                  See All
+                </button>
+              </div>
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Avatar className="w-10 h-10">
+                      <AvatarFallback className="bg-gradient-to-br from-blue-400 to-cyan-500 text-white text-xs">
+                        U{i}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-semibold text-sm text-gray-900 truncate">
+                        user{i}
+                      </h4>
+                      <p className="text-xs text-gray-500 truncate">
+                        Suggested for you
+                      </p>
+                    </div>
+                    <button className="text-xs font-semibold text-blue-500 hover:text-blue-700 flex-shrink-0">
+                      Follow
+                    </button>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-muted-foreground">Total Posts</span>
-                    <span className="text-foreground font-semibold">
-                      {stats.totalPosts}
-                    </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Trending Topics */}
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
+              <h3 className="text-sm font-semibold text-gray-500 mb-4">
+                Trending Topics
+              </h3>
+              <div className="space-y-3">
+                {trendingTopics.map((topic, index) => (
+                  <div
+                    key={index}
+                    className="flex items-center justify-between hover:bg-gray-50 -mx-2 px-2 py-1.5 rounded-lg cursor-pointer transition-colors"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">
+                        #{topic.name}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {topic.count} posts
+                      </p>
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
+                ))}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="px-4 text-xs text-gray-400 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                <a href="/about" className="hover:text-gray-600">About</a>
+                <span>·</span>
+                <a href="/help" className="hover:text-gray-600">Help</a>
+                <span>·</span>
+                <a href="/press" className="hover:text-gray-600">Press</a>
+                <span>·</span>
+                <a href="/api" className="hover:text-gray-600">API</a>
+                <span>·</span>
+                <a href="/jobs" className="hover:text-gray-600">Jobs</a>
+                <span>·</span>
+                <a href="/privacy" className="hover:text-gray-600">Privacy</a>
+                <span>·</span>
+                <a href="/terms" className="hover:text-gray-600">Terms</a>
+              </div>
+              <p>© 2025 KLUSTER</p>
+            </div>
           </div>
         </div>
       </div>
