@@ -82,6 +82,10 @@ export default function ChatPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeft, setScrollLeft] = useState(0);
+  // Group Members State
+  const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
+  const [groupMembers, setGroupMembers] = useState([]);
+  const [loadingMembers, setLoadingMembers] = useState(false);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -312,7 +316,7 @@ export default function ChatPage() {
       const validConversations = conversationsWithDetails.filter(
         (c) => c !== null
       );
-      
+
       // Remove duplicates by conversation ID
       const uniqueConversations = validConversations.reduce((acc, current) => {
         const exists = acc.find(item => item.id === current.id);
@@ -321,7 +325,7 @@ export default function ChatPage() {
         }
         return acc;
       }, []);
-      
+
       console.log("Loaded conversations:", uniqueConversations);
       setConversations(uniqueConversations);
 
@@ -342,7 +346,10 @@ export default function ChatPage() {
     try {
       const supabase = createClient();
 
-      const { data, error } = await supabase
+      console.log("📩 Fetching messages for conversation:", conversationId);
+
+      // 1️⃣ Fetch messages
+      const { data: messages, error } = await supabase
         .from("dm_messages")
         .select("*")
         .eq("conversation_id", conversationId)
@@ -351,12 +358,43 @@ export default function ChatPage() {
 
       if (error) throw error;
 
-      setMessages(data || []);
+      console.log("➡️ Raw Messages:", messages);
 
-      // Mark messages as read
+      // 2️⃣ Extract unique sender_ids
+      const senderIds = [...new Set(messages.map((m) => m.sender_id))];
+      console.log("👤 Sender IDs:", senderIds);
+
+      // 3️⃣ Fetch all profiles for those sender_ids
+      const { data: profilesData, error: profilesError } = await supabase
+        .from("profiles")
+        .select("id, full_name, profile_picture, username")
+        .in("id", senderIds);
+
+      if (profilesError) throw profilesError;
+
+      console.log("👥 Profiles Fetched:", profilesData);
+
+      // 4️⃣ Merge each message with its sender profile
+      const messagesWithProfiles = messages.map((msg) => {
+        const profile = profilesData?.find((p) => p.id === msg.sender_id) || null;
+
+        console.log("🔗 Mapping message:", msg.id, "=> Profile:", profile);
+
+        return {
+          ...msg,
+          profile,
+        };
+      });
+
+      console.log("✅ Final Merged Messages:", messagesWithProfiles);
+
+      // 5️⃣ Save final message list
+      setMessages(messagesWithProfiles);
+
+      // Mark as read
       await supabase.rpc("mark_messages_read", { conv_id: conversationId });
 
-      // Update local unread count
+      // Clear unread counter locally
       setConversations((prev) =>
         prev.map((c) =>
           c.id === conversationId ? { ...c, unreadCount: 0 } : c
@@ -368,10 +406,12 @@ export default function ChatPage() {
         window.dispatchEvent(new CustomEvent("conversationsUpdated"));
       }
     } catch (error) {
-      console.error("Error fetching messages:", error);
+      console.error("❌ Error fetching messages:", error);
       toast.error("Failed to load messages");
     }
   };
+
+
 
   const joinGroupFromLink = async (groupId) => {
     if (!user?.id || !groupId) return;
@@ -534,108 +574,122 @@ export default function ChatPage() {
     }
   }, [user?.id]);
 
-  // Real-time subscriptions
   useEffect(() => {
     if (!user) return;
 
     const supabase = createClient();
 
-    // Subscribe to new messages
-    const messagesChannel = supabase
+    const channel = supabase
       .channel("dm_messages_changes_" + user.id)
+
+      // 🔵 INSERT — new incoming message
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "dm_messages",
-        },
+        { event: "INSERT", schema: "public", table: "dm_messages" },
         async (payload) => {
-          console.log("New message received:", payload.new);
+          console.log("🔵 RT: New Message:", payload.new);
 
-          // If message is in current conversation, add to messages
-          if (payload.new.conversation_id === selectedChat?.id) {
+          const msg = payload.new;
+
+          // Only handle messages for currently opened chat
+          if (msg.conversation_id === selectedChat?.id) {
+
+            // ⬇ Fetch sender's profile
+            const { data: senderProfile } = await supabase
+              .from("profiles")
+              .select("id, full_name, profile_picture, username")
+              .eq("id", msg.sender_id)
+              .single();
+
+            const messageWithProfile = {
+              ...msg,
+              profile: senderProfile || null,
+            };
+
+            // ⬇ Add message if not already present
             setMessages((prev) => {
-              // Check if message already exists to avoid duplicates
-              if (prev.some((m) => m.id === payload.new.id)) {
-                return prev;
-              }
-              return [...prev, payload.new];
+              if (prev.some((m) => m.id === msg.id)) return prev;
+              return [...prev, messageWithProfile];
             });
 
-            // Mark as read if user is viewing and not sender
-            if (payload.new.sender_id !== user.id) {
+            // Mark as read if message is not sent by you
+            if (msg.sender_id !== user.id) {
               await supabase.rpc("mark_messages_read", {
-                conv_id: payload.new.conversation_id,
+                conv_id: msg.conversation_id,
               });
             }
           }
 
-          // Always update conversation list to show new message
+          // 🔄 Update conversations list (sidebar)
           setConversations((prev) => {
-            const convIndex = prev.findIndex(
-              (c) => c.id === payload.new.conversation_id
-            );
+            const index = prev.findIndex((c) => c.id === msg.conversation_id);
+            if (index === -1) return prev;
 
-            if (convIndex !== -1) {
-              const updatedConv = {
-                ...prev[convIndex],
-                lastMessage: payload.new,
-                updatedAt: payload.new.created_at,
-              };
+            const updated = { ...prev[index] };
 
-              // If message is not from current user and not in selected chat, increment unread
-              if (
-                payload.new.sender_id !== user.id &&
-                payload.new.conversation_id !== selectedChat?.id
-              ) {
-                updatedConv.unreadCount =
-                  (prev[convIndex].unreadCount || 0) + 1;
-              }
+            updated.lastMessage = msg;
+            updated.updatedAt = msg.created_at;
 
-              // Move conversation to top
-              const newConvs = prev.filter((_, i) => i !== convIndex);
-              return [updatedConv, ...newConvs];
-            } else {
-              // New conversation, fetch full details
-              fetchConversations();
-              return prev;
+            if (
+              msg.sender_id !== user.id &&
+              msg.conversation_id !== selectedChat?.id
+            ) {
+              updated.unreadCount = (updated.unreadCount || 0) + 1;
             }
+
+            const newList = prev.filter((_, i) => i !== index);
+            return [updated, ...newList];
           });
         }
       )
+
+      // 🟡 UPDATE — message edited (same fix applied)
       .on(
         "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "dm_messages",
-        },
-        (payload) => {
-          // Update message in list (for edits)
-          if (payload.new.conversation_id === selectedChat?.id) {
+        { event: "UPDATE", schema: "public", table: "dm_messages" },
+        async (payload) => {
+          console.log("🟡 RT: Message Edited:", payload.new);
+
+          const msg = payload.new;
+
+          if (msg.conversation_id === selectedChat?.id) {
+            // Fetch sender's profile again
+            const { data: senderProfile } = await supabase
+              .from("profiles")
+              .select("id, full_name, profile_picture, username")
+              .eq("id", msg.sender_id)
+              .single();
+
+            const updatedMsg = {
+              ...msg,
+              profile: senderProfile || null,
+            };
+
             setMessages((prev) =>
-              prev.map((m) => (m.id === payload.new.id ? payload.new : m))
+              prev.map((m) => (m.id === updatedMsg.id ? updatedMsg : m))
             );
           }
         }
       )
+
       .subscribe();
 
     return () => {
-      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(channel);
     };
   }, [user, selectedChat]);
+
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !selectedChat || !user) return;
 
     setSending(true);
+    const supabase = createClient();
     const messageContent = newMessage.trim();
     const tempId = `temp-${Date.now()}`;
 
-    // Optimistic update - show message immediately
+    // Optimistic message
     const optimisticMessage = {
       id: tempId,
       conversation_id: selectedChat.id,
@@ -644,14 +698,19 @@ export default function ChatPage() {
       created_at: new Date().toISOString(),
       is_edited: false,
       is_deleted: false,
+      profile: {
+        // immediate profile in UI
+        id: user.id,
+        full_name: user.full_name,
+        username: user.username,
+        profile_picture: user.profile_picture,
+      },
     };
 
     setMessages((prev) => [...prev, optimisticMessage]);
     setNewMessage("");
 
     try {
-      const supabase = createClient();
-
       const { data, error } = await supabase
         .from("dm_messages")
         .insert({
@@ -664,8 +723,22 @@ export default function ChatPage() {
 
       if (error) throw error;
 
-      // Replace temporary message with real one
-      setMessages((prev) => prev.map((m) => (m.id === tempId ? data : m)));
+      // Fetch profile for sender (your profile)
+      const { data: senderProfile } = await supabase
+        .from("profiles")
+        .select("id, full_name, profile_picture, username")
+        .eq("id", user.id)
+        .single();
+
+      const messageWithProfile = {
+        ...data,
+        profile: senderProfile || null,
+      };
+
+      // Replace temp with real message including profile
+      setMessages((prev) =>
+        prev.map((m) => (m.id === tempId ? messageWithProfile : m))
+      );
     } catch (error) {
       // Remove optimistic message on error
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
@@ -675,6 +748,7 @@ export default function ChatPage() {
       setSending(false);
     }
   };
+
 
   const handleSelectChat = async (chat) => {
     setSelectedChat(chat);
@@ -880,6 +954,43 @@ export default function ChatPage() {
     }
   };
 
+  const fetchGroupMembers = async (conversationId) => {
+    try {
+      setLoadingMembers(true);
+      const supabase = createClient();
+
+      // 1. Get User IDs from conversation_participants
+      const { data: participants, error: partError } = await supabase
+        .from("conversation_participants")
+        .select("user_id")
+        .eq("conversation_id", conversationId);
+
+      if (partError) throw partError;
+
+      const userIds = participants.map((p) => p.user_id);
+
+      if (userIds.length === 0) {
+        setGroupMembers([]);
+        return;
+      }
+
+      // 2. Get Profiles using those IDs
+      const { data: profiles, error: profError } = await supabase
+        .from("profiles")
+        .select("id, full_name, profile_picture, username, department, role")
+        .in("id", userIds);
+
+      if (profError) throw profError;
+
+      setGroupMembers(profiles);
+    } catch (error) {
+      console.error("Error fetching group members:", error);
+      toast.error("Failed to load group members");
+    } finally {
+      setLoadingMembers(false);
+    }
+  };
+
   const leaveConversation = async (conversationId) => {
     try {
       const supabase = createClient();
@@ -955,6 +1066,66 @@ export default function ChatPage() {
         onOpenChange={setIsInviteDialogOpen}
         conversationId={selectedChat?.id}
       />
+
+      {/* Group Members Dialog */}
+      <Dialog open={isGroupInfoOpen} onOpenChange={setIsGroupInfoOpen}>
+        <DialogContent className="bg-cyber-card border-cyber-border text-foreground max-w-md">
+          <DialogHeader>
+            <DialogTitle>Group Members</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              {selectedChat?.groupName} • {groupMembers.length} members
+            </p>
+          </DialogHeader>
+
+          <div className="mt-4">
+            {loadingMembers ? (
+              <div className="flex justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-neon-purple" />
+              </div>
+            ) : (
+              <ScrollArea className="h-[300px] pr-4">
+                <div className="space-y-3">
+                  {groupMembers.map((member) => (
+                    <div
+                      key={member.id}
+                      className="flex items-center justify-between p-2 hover:bg-cyber-darker/50 rounded-lg transition-colors cursor-pointer"
+                      onClick={() => {
+                        setIsGroupInfoOpen(false); // Close modal
+                        router.push(`/profile/${member.id}`); // Navigate to profile
+                      }}
+                    >
+                      <div className="flex items-center gap-3">
+                        <Avatar className="h-10 w-10 border border-cyber-border">
+                          <AvatarImage src={member.profile_picture} />
+                          <AvatarFallback className="bg-neon-cyan/20 text-neon-cyan text-xs">
+                            {getUserInitials(member.full_name)}
+                          </AvatarFallback>
+                        </Avatar>
+                        <div>
+                          <p className="font-medium text-sm text-foreground">
+                            {member.full_name}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            @{member.username}
+                            {member.department && ` • ${member.department}`}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Optional: Admin Badge if you track creator_id */}
+                      {selectedChat?.created_by === member.id && (
+                        <Badge variant="outline" className="text-[10px] border-neon-purple text-neon-purple">
+                          Admin
+                        </Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isCreateGroupOpen} onOpenChange={setIsCreateGroupOpen}>
         <DialogContent className="bg-cyber-card border-cyber-border">
@@ -1200,12 +1371,14 @@ export default function ChatPage() {
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
                   <div
-                    className={`flex items-center gap-3 ${selectedChat.isGroup
-                      ? "cursor-default"
-                      : "cursor-pointer hover:opacity-80 transition-opacity"
-                      }`}
+                    className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition-opacity"
                     onClick={() => {
-                      if (!selectedChat.isGroup && selectedChat.otherUser?.id) {
+                      if (selectedChat.isGroup) {
+                        // CASE 1: Open Group Members List
+                        setIsGroupInfoOpen(true);
+                        fetchGroupMembers(selectedChat.id);
+                      } else if (selectedChat.otherUser?.id) {
+                        // CASE 2: Go to User Profile
                         router.push(`/profile/${selectedChat.otherUser.id}`);
                       }
                     }}
@@ -1294,12 +1467,15 @@ export default function ChatPage() {
                     </div>
                   ) : (
                     messages.map((msg, index) => {
-                      const isOwn = msg.sender_id === user.id;
+                      const isOwn = msg.sender_id === user?.id;
+
+                      // Determine sender details for the Avatar
+                      // If isOwn, use 'user'. If not, try msg.sender (for groups) or fallback to selectedChat.otherUser
+                      const senderProfile = (msg.profile || selectedChat.otherUser);
+
                       const showDate =
                         index === 0 ||
-                        new Date(
-                          messages[index - 1].created_at
-                        ).toDateString() !==
+                        new Date(messages[index - 1].created_at).toDateString() !==
                         new Date(msg.created_at).toDateString();
 
                       return (
@@ -1311,34 +1487,55 @@ export default function ChatPage() {
                               </span>
                             </div>
                           )}
-                          <div
-                            className={`flex ${isOwn ? "justify-end" : "justify-start"
-                              }`}
-                          >
+
+                          {/* Flex container for Avatar + Bubble */}
+                          <div className={`flex w-full gap-2 ${isOwn ? "justify-end" : "justify-start"}`}>
+
+                            {/* AVATAR: RECEIVED MESSAGE (Left Side) */}
+                            {!isOwn && (
+                              <Avatar
+                                className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all mt-1"
+                                onClick={() => router.push(`/profile/${senderProfile?.id}`)}
+                              >
+                                <AvatarImage src={senderProfile?.profile_picture} />
+                                <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-xs">
+                                  {getUserInitials(senderProfile?.full_name)}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+
+                            {/* MESSAGE BUBBLE */}
                             <div
-                              className={`max-w-[85%] md:max-w-md px-4 py-2 rounded-2xl ${isOwn
+                              className={`max-w-[75%] md:max-w-md px-4 py-2 rounded-2xl ${isOwn
                                 ? "bg-gradient-to-r from-neon-purple to-neon-cyan text-black rounded-br-sm"
                                 : "bg-cyber-card border border-cyber-border text-foreground rounded-bl-sm"
                                 }`}
                             >
-                              <p className="whitespace-pre-wrap break-words">
-                                {msg.content}
-                              </p>
+                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                               <div className="flex items-center gap-1 justify-end mt-1">
-                                <span className="text-xs opacity-70">
-                                  {new Date(msg.created_at).toLocaleTimeString(
-                                    [],
-                                    {
-                                      hour: "2-digit",
-                                      minute: "2-digit",
-                                    }
-                                  )}
+                                <span className="text-[10px] opacity-70">
+                                  {new Date(msg.created_at).toLocaleTimeString([], {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })}
                                 </span>
-                                {isOwn && (
-                                  <CheckCheck className="w-3 h-3 opacity-70" />
-                                )}
+                                {isOwn && <CheckCheck className="w-3 h-3 opacity-70" />}
                               </div>
                             </div>
+
+                            {/* AVATAR: SENT MESSAGE (Right Side) */}
+                            {isOwn && (
+                              <Avatar
+                                className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all mt-1"
+                                onClick={() => router.push('/profile')}
+                              >
+                                <AvatarImage src={senderProfile?.profile_picture} />
+                                <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-xs">
+                                  {getUserInitials(senderProfile?.full_name)}
+                                </AvatarFallback>
+                              </Avatar>
+                            )}
+
                           </div>
                         </div>
                       );
