@@ -34,7 +34,7 @@ import {
   CheckCheck,
   Loader2,
   ArrowLeft,
-  Plus, Users, Trash2, LogOut, UserPlus
+  Plus, Users, Trash2, LogOut, UserPlus, Pencil, X, Reply
 } from "lucide-react";
 
 import {
@@ -86,6 +86,72 @@ export default function ChatPage() {
   const [isGroupInfoOpen, setIsGroupInfoOpen] = useState(false);
   const [groupMembers, setGroupMembers] = useState([]);
   const [loadingMembers, setLoadingMembers] = useState(false);
+
+  // editing and replying msg
+  const [editingMessageId, setEditingMessageId] = useState(null);
+  const [editContent, setEditContent] = useState("");
+  const [replyingTo, setReplyingTo] = useState(null);
+
+  // Handler to start editing
+  const startEditing = (msg) => {
+    setEditingMessageId(msg.id);
+    setEditContent(msg.content);
+  };
+
+  // Handler to cancel editing
+  const cancelEditing = () => {
+    setEditingMessageId(null);
+    setEditContent("");
+  };
+
+  // Handler to save edit
+  const handleSaveEdit = async (msgId) => {
+    if (!editContent.trim()) return;
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from("dm_messages")
+        .update({
+          content: editContent,
+          is_edited: true
+        })
+        .eq("id", msgId);
+
+      if (error) throw error;
+
+      // Update local state
+      setMessages((prev) =>
+        prev.map((m) => (m.id === msgId ? { ...m, content: editContent, is_edited: true } : m))
+      );
+      setEditingMessageId(null);
+      toast.success("Message updated");
+    } catch (error) {
+      console.error("Error updating message:", error);
+      toast.error("Failed to update message");
+    }
+  };
+
+  // Handler to delete message
+  const handleDeleteMessage = async (msgId) => {
+    try {
+      const supabase = createClient();
+      // Soft delete (set is_deleted to true) or Hard delete depending on preference
+      const { error } = await supabase
+        .from("dm_messages")
+        .update({ is_deleted: true }) // Assuming you have an is_deleted column
+        .eq("id", msgId);
+
+      if (error) throw error;
+
+      // Remove from local state
+      setMessages((prev) => prev.filter((m) => m.id !== msgId));
+      toast.success("Message deleted");
+    } catch (error) {
+      console.error("Error deleting message:", error);
+      toast.error("Failed to delete message");
+    }
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -689,6 +755,11 @@ export default function ChatPage() {
     const messageContent = newMessage.trim();
     const tempId = `temp-${Date.now()}`;
 
+    // Capture the ID we are replying to (if any)
+    const replyToId = replyingTo?.id || null;
+    // Capture the actual reply object for optimistic UI
+    const replyToObj = replyingTo;
+
     // Optimistic message
     const optimisticMessage = {
       id: tempId,
@@ -698,8 +769,9 @@ export default function ChatPage() {
       created_at: new Date().toISOString(),
       is_edited: false,
       is_deleted: false,
+      reply_to: replyToId, // Store ID
+      replyToMessage: replyToObj, // Store object for display
       profile: {
-        // immediate profile in UI
         id: user.id,
         full_name: user.full_name,
         username: user.username,
@@ -709,6 +781,7 @@ export default function ChatPage() {
 
     setMessages((prev) => [...prev, optimisticMessage]);
     setNewMessage("");
+    setReplyingTo(null); // 🟢 Clear reply state immediately
 
     try {
       const { data, error } = await supabase
@@ -717,13 +790,14 @@ export default function ChatPage() {
           conversation_id: selectedChat.id,
           sender_id: user.id,
           content: messageContent,
+          reply_to: replyToId, // 🟢 Send to DB
         })
         .select()
         .single();
 
       if (error) throw error;
 
-      // Fetch profile for sender (your profile)
+      // ... (Keep existing profile fetching logic here) ...
       const { data: senderProfile } = await supabase
         .from("profiles")
         .select("id, full_name, profile_picture, username")
@@ -733,14 +807,14 @@ export default function ChatPage() {
       const messageWithProfile = {
         ...data,
         profile: senderProfile || null,
+        // We manually attach the reply object so it renders immediately without re-fetching
+        replyToMessage: replyToObj
       };
 
-      // Replace temp with real message including profile
       setMessages((prev) =>
         prev.map((m) => (m.id === tempId ? messageWithProfile : m))
       );
     } catch (error) {
-      // Remove optimistic message on error
       setMessages((prev) => prev.filter((m) => m.id !== tempId));
       console.error("Error sending message:", error);
       toast.error("Failed to send message");
@@ -1468,10 +1542,11 @@ export default function ChatPage() {
                   ) : (
                     messages.map((msg, index) => {
                       const isOwn = msg.sender_id === user?.id;
+                      const senderProfile = msg.profile || selectedChat.otherUser;
+                      const isEditing = editingMessageId === msg.id;
 
-                      // Determine sender details for the Avatar
-                      // If isOwn, use 'user'. If not, try msg.sender (for groups) or fallback to selectedChat.otherUser
-                      const senderProfile = (msg.profile || selectedChat.otherUser);
+                      const parentMessage =
+                        msg.replyToMessage || messages.find((m) => m.id === msg.reply_to);
 
                       const showDate =
                         index === 0 ||
@@ -1488,79 +1563,281 @@ export default function ChatPage() {
                             </div>
                           )}
 
-                          {/* Flex container for Avatar + Bubble */}
-                          <div className={`flex w-full gap-2 ${isOwn ? "justify-end" : "justify-start"}`}>
-
-                            {/* AVATAR: RECEIVED MESSAGE (Left Side) */}
+                          <div
+                            className={`flex w-full gap-2 group ${isOwn ? "justify-end" : "justify-start"
+                              }`}
+                          >
+                            {/* --- LEFT AVATAR (OTHER USER) --- */}
                             {!isOwn && (
                               <Avatar
-                                className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all mt-1"
+                                className="h-8 w-8 md:h-10 md:w-10 cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all mt-1"
                                 onClick={() => router.push(`/profile/${senderProfile?.id}`)}
                               >
                                 <AvatarImage src={senderProfile?.profile_picture} />
-                                <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-xs">
+                                <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-[10px] md:text-xs">
                                   {getUserInitials(senderProfile?.full_name)}
                                 </AvatarFallback>
                               </Avatar>
                             )}
 
-                            {/* MESSAGE BUBBLE */}
+
+                            {/* ✅ CONTROLS ON LEFT FOR OWN MESSAGES (3 DOTS + REPLY SIDE BY SIDE) */}
+                            {isOwn && (
+                              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                {/* 3-dot action menu (leftmost) */}
+                                {!isEditing && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 md:h-8 md:w-8 rounded-full"
+                                      >
+                                        <MoreVertical className="h-3 w-3 md:h-4 md:w-4 text-muted-foreground" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent
+                                      align="end"
+                                      className="bg-cyber-card border-cyber-border"
+                                    >
+                                      <DropdownMenuItem onClick={() => startEditing(msg)}>
+                                        <Pencil className="w-4 h-4 mr-2" /> Edit
+                                      </DropdownMenuItem>
+                                      <DropdownMenuItem
+                                        onClick={() => handleDeleteMessage(msg.id)}
+                                        className="text-red-500 focus:text-red-500"
+                                      >
+                                        <Trash2 className="w-4 h-4 mr-2" /> Delete
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+
+                                {/* Reply button (to the right of 3 dots) */}
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full"
+                                  onClick={() => setReplyingTo(msg)}
+                                >
+                                  <Reply className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              </div>
+                            )}
+
+
+                            {/* --- MESSAGE + REPLY QUOTE + TIMESTAMP --- */}
                             <div
-                              className={`max-w-[75%] md:max-w-md px-4 py-2 rounded-2xl ${isOwn
-                                ? "bg-gradient-to-r from-neon-purple to-neon-cyan text-black rounded-br-sm"
-                                : "bg-cyber-card border border-cyber-border text-foreground rounded-bl-sm"
+                              className={`flex flex-col max-w-[75%] md:max-w-md ${isOwn ? "items-end" : "items-start"
                                 }`}
                             >
-                              <p className="whitespace-pre-wrap break-words">{msg.content}</p>
-                              <div className="flex items-center gap-1 justify-end mt-1">
-                                <span className="text-[10px] opacity-70">
-                                  {new Date(msg.created_at).toLocaleTimeString([], {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                                {isOwn && <CheckCheck className="w-3 h-3 opacity-70" />}
+
+
+                              {/* 🟢 2. MAIN BUBBLE */}
+                              <div
+                                id={`msg-${msg.id}`}
+                                className={`px-4 py-2 rounded-2xl ${isOwn
+                                  ? "bg-gradient-to-r from-neon-purple to-neon-cyan text-black rounded-br-sm"
+                                  : "bg-cyber-card border border-cyber-border text-foreground rounded-bl-sm"
+                                  }`}
+                              >
+                                {/* ✅ WhatsApp-style reply header inside bubble */}
+                                {msg.reply_to && (
+                                  <div
+                                    className={`mb-1 flex gap-2 items-start cursor-pointer rounded-lg border px-3 py-2
+      ${isOwn
+                                        ? // own message – light card in light mode, dark card in dark mode
+                                        "bg-white/95 border-white/80 text-black dark:bg-cyber-darker/90 dark:border-cyber-border/80 dark:text-foreground"
+                                        : // other message – slightly grey in light, dark card in dark mode
+                                        "bg-zinc-100 border-zinc-200 text-foreground dark:bg-cyber-darker/90 dark:border-cyber-border/80"
+                                      }`}
+                                    onClick={() => {
+                                      const el = document.getElementById(`msg-${msg.reply_to}`);
+                                      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+                                    }}
+                                  >
+                                    {/* vertical color bar */}
+                                    <div
+                                      className={`w-1 rounded-full mt-0.5 ${isOwn
+                                        ? "bg-violet-500 dark:bg-neon-purple"
+                                        : "bg-cyan-500 dark:bg-neon-cyan"
+                                        }`}
+                                    />
+
+                                    <div className="flex flex-col overflow-hidden">
+                                      {/* name */}
+                                      <span
+                                        className={`text-[11px] font-semibold leading-tight ${isOwn
+                                          ? "text-violet-600 dark:text-neon-purple"
+                                          : "text-cyan-600 dark:text-neon-cyan"
+                                          }`}
+                                      >
+                                        {parentMessage
+                                          ? parentMessage.sender_id === user?.id
+                                            ? "You"
+                                            : parentMessage.profile?.full_name || "User"
+                                          : "Unknown User"}
+                                      </span>
+
+                                      {/* replied text */}
+                                      <span
+                                        className={`text-xs italic line-clamp-2 ${isOwn
+                                          ? "text-zinc-700 dark:text-muted-foreground"
+                                          : "text-zinc-600 dark:text-muted-foreground"
+                                          }`}
+                                      >
+                                        {parentMessage
+                                          ? parentMessage.content
+                                          : "Original message deleted or unavailable"}
+                                      </span>
+                                    </div>
+                                  </div>
+                                )}
+
+
+
+                                {isEditing ? (
+                                  /* EDIT MODE INPUT */
+                                  <div className="flex flex-col gap-2 min-w-[200px]">
+                                    <Input
+                                      value={editContent}
+                                      onChange={(e) => setEditContent(e.target.value)}
+                                      className="bg-white/20 border-none text-black placeholder-black/50 focus-visible:ring-0 h-8"
+                                      autoFocus
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleSaveEdit(msg.id);
+                                        if (e.key === "Escape") cancelEditing();
+                                      }}
+                                    />
+                                    <div className="flex justify-end gap-2">
+                                      <Button
+                                        size="icon"
+                                        className="h-6 w-6 rounded-full bg-red-500/20 hover:bg-red-500/40 text-red-700"
+                                        onClick={cancelEditing}
+                                      >
+                                        <X className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="icon"
+                                        className="h-6 w-6 rounded-full bg-green-500/20 hover:bg-green-500/40 text-green-700"
+                                        onClick={() => handleSaveEdit(msg.id)}
+                                      >
+                                        <CheckCheck className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  /* READ MODE TEXT */
+                                  <>
+                                    <p className="whitespace-pre-wrap break-words text-sm md:text-base">
+                                      {msg.content}
+                                    </p>
+                                    <div className="flex items-center gap-1 justify-end mt-1">
+                                      <span className="text-[10px] opacity-70">
+                                        {msg.is_edited && <span className="italic mr-1">(edited)</span>}
+                                        {new Date(msg.created_at).toLocaleTimeString([], {
+                                          hour: "2-digit",
+                                          minute: "2-digit",
+                                        })}
+                                      </span>
+                                      {isOwn && <CheckCheck className="w-3 h-3 opacity-70" />}
+                                    </div>
+                                  </>
+                                )}
                               </div>
+
                             </div>
 
-                            {/* AVATAR: SENT MESSAGE (Right Side) */}
+                            {/* ✅ REPLY BUTTON ON RIGHT FOR OTHER MESSAGES ONLY */}
+                            {!isOwn && (
+                              <div className="flex items-center opacity-0 group-hover:opacity-100 transition-opacity">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-full"
+                                  onClick={() => setReplyingTo(msg)}
+                                >
+                                  <Reply className="h-4 w-4 text-muted-foreground" />
+                                </Button>
+                              </div>
+                            )}
+
+                            {/* --- RIGHT AVATAR (OWN USER) --- */}
                             {isOwn && (
                               <Avatar
-                                className="h-10 w-10 cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all mt-1"
-                                onClick={() => router.push('/profile')}
+                                className="h-8 w-8 md:h-10 md:w-10 cursor-pointer hover:ring-2 hover:ring-neon-cyan transition-all mt-1"
+                                onClick={() => router.push("/profile")}
                               >
                                 <AvatarImage src={senderProfile?.profile_picture} />
-                                <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-xs">
-                                  {getUserInitials(senderProfile?.full_name)}
+                                <AvatarFallback className="bg-neon-purple/20 text-neon-purple text-[10px] md:text-xs">
+                                  {getUserInitials(senderProfile?.full_name || user?.full_name)}
                                 </AvatarFallback>
                               </Avatar>
                             )}
-
                           </div>
                         </div>
                       );
                     })
+
                   )}
                   <div ref={messagesEndRef} />
                 </div>
               </div>
 
               <Separator />
-              {/* Message Input */}
+
+              {/* Message Input Area */}
               <Card className="rounded-none border-0 border-t bg-cyber-card/30">
-                <CardContent className="p-4">
-                  <form
-                    onSubmit={handleSendMessage}
-                    className="flex items-center gap-2"
-                  >
+                {/* 🟢 WHATSAPP-STYLE REPLY PREVIEW */}
+                {replyingTo && (
+                  <div className="px-4 pt-3">
+                    <div className="flex items-start justify-between rounded-xl bg-cyber-darker/80 border border-cyber-border/60">
+                      {/* Left coloured bar + text */}
+                      <div className="flex gap-2 px-3 py-2 overflow-hidden">
+                        {/* vertical colour bar like WhatsApp */}
+                        <div
+                          className={`w-1 rounded-full mt-0.5 ${replyingTo.sender_id === user.id ? "bg-neon-cyan" : "bg-neon-purple"
+                            }`}
+                        />
+
+                        <div className="flex flex-col overflow-hidden">
+                          <span className="text-[11px] font-semibold text-neon-cyan leading-tight">
+                            {replyingTo.sender_id === user.id
+                              ? "You"
+                              : replyingTo.profile?.full_name || "User"}
+                          </span>
+                          <span className="text-xs text-muted-foreground line-clamp-2">
+                            {replyingTo.content}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Close (X) */}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="mt-1 mr-1 h-6 w-6 rounded-full hover:bg-red-500/20 hover:text-red-500"
+                        onClick={() => setReplyingTo(null)}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
+
+                <CardContent className={`p-4 ${replyingTo ? "pt-2" : ""}`}>
+
+                  <form onSubmit={handleSendMessage} className="flex items-center gap-2">
                     <Input
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
-                      placeholder="Type a message..."
+                      placeholder={replyingTo ? "Type your reply..." : "Type a message..."}
                       className="flex-1 bg-cyber-darker border-cyber-border rounded-full px-4"
                       disabled={sending}
                       autoComplete="off"
+                      ref={(input) => input && replyingTo && input.focus()} // Auto focus on reply
                     />
+
                     <Button
                       type="submit"
                       size="icon"
@@ -1576,6 +1853,7 @@ export default function ChatPage() {
                   </form>
                 </CardContent>
               </Card>
+
             </>
           ) : (
             <div className="flex-1 flex items-center justify-center bg-cyber-darker/50 p-4">
